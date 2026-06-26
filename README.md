@@ -255,6 +255,6 @@ Chaque nouvelle version apporte une fonctionnalité majeure en suivant une archi
 
 # 👨‍💻 Auteur
 
-Développé par **Johann Glotin**
+Développé par **Choupivip**
 
 Projet personnel réalisé autour d'un serveur privé **All the Mods 10: To the Sky**.
