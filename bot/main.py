@@ -1,54 +1,51 @@
-import os
+from pathlib import Path
 
 import discord
 from discord.ext import commands
-from dotenv import load_dotenv
 
-# Charger les variables d'environnement
-load_dotenv()
+from bot.config import Config
+from bot.logger import logger
 
-TOKEN = os.getenv("DISCORD_TOKEN")
 
-# Vérification du token
-if TOKEN is None:
-    raise ValueError("Le token Discord est introuvable dans le fichier .env")
+class ATM10Bot(commands.Bot):
+    def __init__(self):
+        intents = discord.Intents.default()
 
-# Intents
-intents = discord.Intents.default()
+        # Pour les futures commandes et événements
+        intents.message_content = True
+        intents.members = True
 
-# Création du bot
-bot = commands.Bot(
-    command_prefix="!",
-    intents=intents
-)
+        super().__init__(
+            command_prefix="!",
+            intents=intents,
+        )
 
-# Événement au démarrage
-@bot.event
-async def on_ready():
-    print("=" * 40)
-    print(f"Connecté en tant que : {bot.user}")
-    print(f"ID : {bot.user.id}")
+    async def setup_hook(self):
+        cog_folder = Path(__file__).parent / "cogs"
 
-    try:
-        synced = await bot.tree.sync()
-        print(f"Commandes synchronisées : {len(synced)}")
-    except Exception as e:
-        print(e)
+        for file in cog_folder.glob("*.py"):
+            if file.stem.startswith("_"):
+                continue
 
-    print("=" * 40)
+            extension = f"bot.cogs.{file.stem}"
 
-# Commande /ping
-@bot.tree.command(
-    name="ping",
-    description="Vérifie si le bot est en ligne."
-)
-async def ping(interaction: discord.Interaction):
+            try:
+                await self.load_extension(extension)
+                logger.info(f"✓ Cog chargé : {file.stem}")
 
-    latency = round(bot.latency * 1000)
+            except Exception as e:
+                logger.error(f"Impossible de charger {file.stem}")
+                logger.exception(e)
 
-    await interaction.response.send_message(
-        f"🏓 Pong ! `{latency} ms`"
-    )
+        synced = await self.tree.sync()
+        logger.info(f"{len(synced)} commande(s) synchronisée(s).")
 
-# Lancement du bot
-bot.run(TOKEN)
+    async def on_ready(self):
+        logger.info("=" * 40)
+        logger.info(f"Connecté : {self.user}")
+        logger.info(f"ID : {self.user.id}")
+        logger.info("=" * 40)
+
+
+bot = ATM10Bot()
+bot.run(Config.DISCORD_TOKEN)
