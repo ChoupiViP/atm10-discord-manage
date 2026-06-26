@@ -33,9 +33,8 @@ class ATM10Bot(commands.Bot):
                 await self.load_extension(extension)
                 logger.info(f"✓ Cog chargé : {file.stem}")
 
-            except Exception as e:
-                logger.error(f"Impossible de charger {file.stem}")
-                logger.exception(e)
+            except Exception:
+                logger.exception(f"Impossible de charger l'extension {extension}")
 
         synced = await self.tree.sync()
         logger.info(f"{len(synced)} commande(s) synchronisée(s).")
