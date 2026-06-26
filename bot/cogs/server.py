@@ -1,25 +1,28 @@
-print("docker.py chargé")
-
 import discord
 from discord import app_commands
 from discord.ext import commands
 
-from bot.services.docker_service import DockerService
+from bot.services.minecraft_service import MinecraftService
 
 
-class Docker(commands.Cog):
+class Server(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.docker = DockerService()
+        self.minecraft = MinecraftService()
 
-    @app_commands.command(
-        name="docker",
-        description="Affiche les informations du conteneur Docker."
+    server = app_commands.Group(
+        name="server",
+        description="Gestion du serveur Minecraft"
     )
-    async def docker_info(self, interaction: discord.Interaction):
+
+    @server.command(
+        name="status",
+        description="Affiche le statut du serveur."
+    )
+    async def status(self, interaction: discord.Interaction):
 
         try:
-            info = self.docker.get_status()
+            info = self.minecraft.get_status()
 
             color = (
                 discord.Color.green()
@@ -28,7 +31,7 @@ class Docker(commands.Cog):
             )
 
             embed = discord.Embed(
-                title="🐳 Docker - ATM10 Server",
+                title="🎮 ATM10 Server",
                 color=color
             )
 
@@ -51,19 +54,32 @@ class Docker(commands.Cog):
             )
 
             embed.add_field(
-                name="🔄 Redémarrage",
+                name="🔄 Politique de redémarrage",
                 value=info["restart"],
-                inline=True
+                inline=False
             )
 
             await interaction.response.send_message(embed=embed)
 
         except Exception as e:
+
+            embed = discord.Embed(
+                title="❌ Erreur",
+                description="Impossible de communiquer avec Docker.",
+                color=discord.Color.red()
+            )
+
+            embed.add_field(
+                name="Détails",
+                value=f"```{e}```",
+                inline=False
+            )
+
             await interaction.response.send_message(
-                f"❌ Impossible de récupérer les informations Docker.\n```{e}```",
+                embed=embed,
                 ephemeral=True
             )
 
 
 async def setup(bot):
-    await bot.add_cog(Docker(bot))
+    await bot.add_cog(Server(bot))
