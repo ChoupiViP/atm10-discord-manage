@@ -14,7 +14,8 @@ class DockerService:
 
     def get_container(self):
         self.connect()
-        return self.client.containers.get(Config.DOCKER_CONTAINER)
+        container_name = Config.get_docker_container()
+        return self.client.containers.get(container_name)
 
     def get_status(self):
         try:

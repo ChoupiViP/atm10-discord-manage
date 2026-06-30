@@ -39,6 +39,7 @@ L'objectif est de remplacer progressivement Portainer pour toutes les opération
 - Embeds personnalisés
 - Boutons de confirmation
 - Dashboard Discord (première version)
+- Configuration persistante du container Docker
 
 ### Commandes
 
@@ -46,6 +47,7 @@ L'objectif est de remplacer progressivement Portainer pour toutes les opération
 /ping
 /status
 
+/setup                    # Configure le container Docker par défaut
 /server status
 /server start
 /server stop
@@ -53,6 +55,8 @@ L'objectif est de remplacer progressivement Portainer pour toutes les opération
 
 /dashboard
 ```
+
+**Plus de détails sur `/setup` :** Consulter [SETUP.md](SETUP.md)
 
 ---
 
