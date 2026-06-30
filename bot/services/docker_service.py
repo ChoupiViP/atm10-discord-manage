@@ -1,4 +1,5 @@
 import docker
+from docker.errors import DockerException, NotFound
 
 from bot.config import Config
 
@@ -16,11 +17,33 @@ class DockerService:
         return self.client.containers.get(Config.DOCKER_CONTAINER)
 
     def get_status(self):
-        container = self.get_container()
+        try:
+            container = self.get_container()
 
-        return {
-            "name": container.name,
-            "status": container.status,
-            "image": container.image.tags[0] if container.image.tags else "Aucune",
-            "restart": container.attrs["HostConfig"]["RestartPolicy"]["Name"],
-        }
+            container.reload()
+
+            return {
+                "success": True,
+                "name": container.name,
+                "status": container.status,
+                "image": container.image.tags[0] if container.image.tags else "Aucune",
+                "restart": container.attrs["HostConfig"]["RestartPolicy"]["Name"],
+            }
+
+        except (DockerException, NotFound) as e:
+            return {
+                "success": False,
+                "error": str(e)
+            }
+
+    def start_container(self):
+        container = self.get_container()
+        container.start()
+
+    def stop_container(self):
+        container = self.get_container()
+        container.stop()
+
+    def restart_container(self):
+        container = self.get_container()
+        container.restart()

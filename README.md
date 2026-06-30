@@ -1,56 +1,78 @@
 # 🎮 ATM10 Discord Manager
 
-> **Gestionnaire Discord moderne pour serveur Minecraft All the Mods 10: To the Sky**
+> Modern Discord bot to manage a **Minecraft All the Mods 10: To the Sky** server running in Docker.
 
-ATM10 Discord Manager est un bot Discord développé en Python permettant de gérer un serveur Minecraft hébergé sous Docker directement depuis Discord grâce aux commandes Slash, des embeds modernes et, prochainement, des boutons interactifs.
-
----
-
-# 🚀 Fonctionnalités
-
-## ✅ Version v0.4.0
-
-* Bot Discord entièrement fonctionnel
-* Architecture modulaire avec Cogs
-* Chargement automatique des extensions
-* Logger personnalisé
-* Configuration via `.env`
-* Commandes Slash
-
-  * `/ping`
-  * `/status`
-  * `/server status`
-* Architecture en couches
-* Services dédiés
-* Préparation à Docker
-* Préparation à RCON
+![Version](https://img.shields.io/badge/version-v0.5.0-blue)
+![Python](https://img.shields.io/badge/Python-3.13-yellow)
+![Discord.py](https://img.shields.io/badge/discord.py-2.6-5865F2)
+![Docker](https://img.shields.io/badge/Docker-Ready-2496ED)
+![License](https://img.shields.io/badge/License-MIT-green)
 
 ---
 
-# 📁 Architecture
+# 📖 Description
+
+ATM10 Discord Manager est un bot Discord développé en **Python** permettant d'administrer un serveur **Minecraft All the Mods 10: To the Sky** hébergé dans **Docker**.
+
+L'objectif est de remplacer progressivement Portainer pour toutes les opérations courantes grâce à une interface moderne utilisant :
+
+- 🎮 Commandes Slash
+- 🎨 Embeds Discord
+- 🔘 Boutons interactifs
+- 🐳 Docker
+- 📡 RCON *(prochainement)*
+
+---
+
+# ✨ Fonctionnalités
+
+## ✅ Actuellement disponibles
+
+- Bot Discord
+- Architecture modulaire (Cogs)
+- Logger personnalisé
+- Configuration via `.env`
+- Docker SDK
+- Architecture en couches
+- Gestion des erreurs Docker
+- Permissions
+- Embeds personnalisés
+- Boutons de confirmation
+- Dashboard Discord (première version)
+
+### Commandes
+
+```
+/ping
+/status
+
+/server status
+/server start
+/server stop
+/server restart
+
+/dashboard
+```
+
+---
+
+# 🗂 Architecture
 
 ```
 atm10-discord-manager/
 │
 ├── bot/
-│
-├── cogs/
-│   ├── ping.py
-│   ├── status.py
-│   └── server.py
-│
-├── services/
-│   ├── docker_service.py
-│   └── minecraft_service.py
-│
-├── embeds/
-├── tasks/
-├── utils/
-├── views/
-│
-├── config.py
-├── logger.py
-└── main.py
+│   ├── cogs/
+│   ├── embeds/
+│   ├── exceptions/
+│   ├── models/
+│   ├── services/
+│   ├── tasks/
+│   ├── utils/
+│   ├── views/
+│   ├── config.py
+│   ├── logger.py
+│   └── main.py
 │
 ├── config/
 ├── data/
@@ -58,198 +80,178 @@ atm10-discord-manager/
 ├── logs/
 ├── tests/
 │
-├── .env
-├── .gitignore
+├── CHANGELOG.md
+├── LICENSE
 ├── README.md
-└── requirements.txt
+├── requirements.txt
+└── .env
 ```
 
 ---
 
-# 🏗️ Architecture logicielle
+# 🏗 Architecture logicielle
 
 ```
 Discord
+
       │
+
       ▼
-Server Cog
+
+Discord Cogs
+
       │
+
       ▼
+
 MinecraftService
+
       │
+
       ▼
+
 DockerService
+
       │
+
       ▼
+
 Docker Engine
 ```
-
-Cette architecture permet de séparer :
-
-* l'interface Discord
-* la logique métier
-* la communication avec Docker
-
-Le projet est ainsi plus simple à maintenir et à faire évoluer.
 
 ---
 
 # 🐳 Docker
 
-Le projet est prévu pour fonctionner sur un serveur Debian.
+Le bot est conçu pour fonctionner sur Debian.
 
-La communication avec Docker utilisera directement le socket :
+Connexion via :
 
 ```
 /var/run/docker.sock
 ```
 
-Montage Docker prévu :
+Montage Docker :
 
 ```yaml
 volumes:
   - /var/run/docker.sock:/var/run/docker.sock
 ```
 
-Cette méthode permet de piloter le serveur Minecraft sans exposer l'API Docker sur le réseau.
+---
+
+# 🛠 Technologies
+
+- Python 3.13
+- discord.py
+- Docker SDK for Python
+- python-dotenv
+- Docker
+- Git
+- GitHub
 
 ---
 
-# 🛠️ Technologies
-
-* Python 3.13
-* discord.py 2.x
-* Docker SDK for Python
-* python-dotenv
-* Git
-* GitHub
-* Docker
-* Portainer
-
----
-
-# 📅 Roadmap
+# 🗺 Roadmap
 
 ## ✅ v0.1.0
 
-* Création du bot
-* Première commande Slash
+- Création du bot
+- Première commande Slash
 
 ---
 
 ## ✅ v0.2.0
 
-* Architecture des Cogs
-* Logger
-* Configuration
-* `/ping`
-* `/status`
+- Architecture modulaire
+- Logger
+- Configuration
 
 ---
 
 ## ✅ v0.3.0
 
-* Intégration du Docker SDK
-* DockerService
-* Base de communication avec Docker
+- Docker SDK
+- DockerService
 
 ---
 
 ## ✅ v0.4.0
 
-* Création de MinecraftService
-* Architecture en couches
-* Groupe de commandes `/server`
-* Première commande `/server status`
-* Préparation des futures commandes serveur
+- MinecraftService
+- Architecture en couches
+- `/server status`
 
 ---
 
-## 🔄 v0.5.0
+## ✅ v0.5.0
 
-* `/server start`
-* `/server stop`
-* `/server restart`
-* Gestion des permissions
-
----
-
-## 📡 v0.6.0
-
-* Connexion RCON
-* `/server players`
-* `/server say`
-* `/server save`
+- `/server start`
+- `/server stop`
+- `/server restart`
+- Gestion des permissions
+- Gestion des erreurs Docker
+- Embeds personnalisés
+- Boutons de confirmation
+- Dashboard Discord (v1)
 
 ---
 
-## 📊 v0.7.0
+## 🚧 v0.6.0
 
-* Dashboard Discord
-* Boutons interactifs
-* Mise à jour automatique
-* Informations serveur en temps réel
-
----
-
-## 📜 v0.8.0
-
-* Lecture des logs Minecraft
-* Détection des connexions
-* Détection des déconnexions
-* Détection des morts
-* Détection des crashs
+- Dashboard permanent
+- Actualisation automatique
+- Boutons persistants
+- Sauvegarde de l'ID du message
 
 ---
 
-## 💾 v0.9.0
+## 🚧 v0.7.0
 
-* Sauvegardes automatiques
-* Notifications Discord
-* Rotation des sauvegardes
+- Connexion RCON
+- Liste des joueurs
+- Messages Minecraft
+- Sauvegarde du monde
 
 ---
 
-## 🏆 v1.0.0
+## 🚧 v0.8.0
+
+- Lecture des logs
+- Détection des connexions
+- Détection des morts
+- Détection des crashs
+
+---
+
+## 🚧 v0.9.0
+
+- Sauvegardes automatiques
+- Notifications Discord
+- Statistiques serveur
+
+---
+
+## 🎉 v1.0.0
 
 Première version stable.
 
 Fonctionnalités prévues :
 
-* Contrôle complet du serveur Minecraft
-* Dashboard interactif
-* Docker
-* RCON
-* Sauvegardes
-* Détection des événements
-* Gestion des permissions
-* Déploiement complet via Docker Compose
+- Gestion complète du serveur
+- Dashboard interactif
+- Docker
+- RCON
+- Sauvegardes
+- Surveillance
+- Gestion des permissions
+- Déploiement Docker Compose
 
 ---
 
 # 🎯 Objectif
 
-Créer un gestionnaire Discord moderne permettant de piloter entièrement un serveur **Minecraft All the Mods 10: To the Sky** sans ouvrir Portainer.
-
-À terme, le bot permettra notamment :
-
-* 🚀 Démarrer le serveur
-* ⏹️ Arrêter le serveur
-* 🔄 Redémarrer le serveur
-* 👥 Voir les joueurs connectés
-* 💬 Envoyer des messages dans le chat Minecraft
-* 📊 Consulter l'état du serveur
-* 💀 Recevoir les notifications de morts
-* 📦 Effectuer des sauvegardes
-* 🔔 Être alerté en cas de crash
-
----
-
-# 📌 État du projet
-
-> 🚧 Projet actuellement en développement actif.
-
-Chaque nouvelle version apporte une fonctionnalité majeure en suivant une architecture évolutive et professionnelle.
+Créer un véritable panneau d'administration Discord permettant de gérer entièrement un serveur Minecraft sans ouvrir Portainer.
 
 ---
 
