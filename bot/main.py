@@ -5,13 +5,15 @@ from discord.ext import commands
 
 from bot.config import Config
 from bot.logger import logger
+from bot.tasks.dashboard_task import DashboardTask
+from bot.views.dashboard_view import DashboardView
 
 
 class ATM10Bot(commands.Bot):
-    def __init__(self):
-        intents = discord.Intents.default()
+    """Discord bot entrypoint for ATM10 Discord Manager."""
 
-        # Pour les futures commandes et événements
+    def __init__(self) -> None:
+        intents = discord.Intents.default()
         intents.message_content = True
         intents.members = True
 
@@ -19,8 +21,27 @@ class ATM10Bot(commands.Bot):
             command_prefix="!",
             intents=intents,
         )
+        self.dashboard_task: DashboardTask | None = None
 
-    async def setup_hook(self):
+    async def setup_hook(self) -> None:
+        """Register persistent views, load cogs and start background tasks."""
+        self.add_view(DashboardView())
+        await self._load_cogs()
+
+        self.dashboard_task = DashboardTask(self)
+        self.dashboard_task.start()
+
+        synced = await self.tree.sync()
+        logger.info("%s commande(s) synchronisée(s).", len(synced))
+
+    async def on_ready(self) -> None:
+        """Log bot identity once Discord is ready."""
+        logger.info("=" * 40)
+        logger.info("Connecté : %s", self.user)
+        logger.info("ID : %s", self.user.id if self.user else "inconnu")
+        logger.info("=" * 40)
+
+    async def _load_cogs(self) -> None:
         cog_folder = Path(__file__).parent / "cogs"
 
         for file in cog_folder.glob("*.py"):
@@ -28,22 +49,11 @@ class ATM10Bot(commands.Bot):
                 continue
 
             extension = f"bot.cogs.{file.stem}"
-
             try:
                 await self.load_extension(extension)
-                logger.info(f"✓ Cog chargé : {file.stem}")
-
+                logger.info("Cog chargé : %s", file.stem)
             except Exception:
-                logger.exception(f"Impossible de charger l'extension {extension}")
-
-        synced = await self.tree.sync()
-        logger.info(f"{len(synced)} commande(s) synchronisée(s).")
-
-    async def on_ready(self):
-        logger.info("=" * 40)
-        logger.info(f"Connecté : {self.user}")
-        logger.info(f"ID : {self.user.id}")
-        logger.info("=" * 40)
+                logger.exception("Impossible de charger l'extension %s", extension)
 
 
 bot = ATM10Bot()

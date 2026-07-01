@@ -1,18 +1,24 @@
-FROM python:3.13-slim
+FROM python:3.13-slim AS runtime
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV PIP_NO_CACHE_DIR=1
 
 WORKDIR /app
 
-# Dépendances système
-RUN apt-get update && apt-get install -y \
-    gcc \
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# Installer les dépendances Python
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN python -m pip install --upgrade pip \
+    && pip install -r requirements.txt
 
-# Copier le projet
-COPY . .
+COPY bot ./bot
+COPY README.md CHANGELOG.md LICENSE ./
 
-# Lancer le bot
+RUN mkdir -p /app/data /app/logs
+
+VOLUME ["/app/data", "/app/logs"]
+
 CMD ["python", "-m", "bot.main"]

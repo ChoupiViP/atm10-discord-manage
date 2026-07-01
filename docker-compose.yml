@@ -1,0 +1,18 @@
+services:
+  atm10-discord-manager:
+    image: ${BOT_IMAGE:-ghcr.io/choupivip/atm10-discord-manager:latest}
+    container_name: atm10-discord-manager
+    restart: unless-stopped
+    environment:
+      DISCORD_TOKEN: ${DISCORD_TOKEN}
+      AUTHORIZED_ROLE: ${AUTHORIZED_ROLE:-Admin}
+      DOCKER_CONTAINER: ${DOCKER_CONTAINER}
+      TZ: ${TZ:-Europe/Paris}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - atm10-discord-manager-data:/app/data
+      - atm10-discord-manager-logs:/app/logs
+
+volumes:
+  atm10-discord-manager-data:
+  atm10-discord-manager-logs:

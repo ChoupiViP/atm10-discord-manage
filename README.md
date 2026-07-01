@@ -1,141 +1,179 @@
-# 🎮 ATM10 Discord Manager
+# ATM10 Discord Manager
 
-> Modern Discord bot to manage a **Minecraft All the Mods 10: To the Sky** server running in Docker.
+> Bot Discord Python pour gérer un serveur Minecraft All the Mods 10: To the Sky hébergé dans Docker.
 
-![Version](https://img.shields.io/badge/version-v0.5.0-blue)
+![Version](https://img.shields.io/badge/version-v0.6.0-blue)
 ![Python](https://img.shields.io/badge/Python-3.13-yellow)
-![Discord.py](https://img.shields.io/badge/discord.py-2.6-5865F2)
-![Docker](https://img.shields.io/badge/Docker-Ready-2496ED)
+![discord.py](https://img.shields.io/badge/discord.py-2.6%2B-5865F2)
+![Docker](https://img.shields.io/badge/Docker-SDK-2496ED)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
 ---
 
-# 📖 Description
+## Description
 
-ATM10 Discord Manager est un bot Discord développé en **Python** permettant d'administrer un serveur **Minecraft All the Mods 10: To the Sky** hébergé dans **Docker**.
+ATM10 Discord Manager transforme Discord en panneau d'administration pour un serveur Minecraft Docker. Le bot permet de consulter l'état du serveur, de démarrer, arrêter et redémarrer le conteneur, puis de piloter tout cela depuis un dashboard Discord permanent.
 
-L'objectif est de remplacer progressivement Portainer pour toutes les opérations courantes grâce à une interface moderne utilisant :
-
-- 🎮 Commandes Slash
-- 🎨 Embeds Discord
-- 🔘 Boutons interactifs
-- 🐳 Docker
-- 📡 RCON *(prochainement)*
+L'objectif long terme est de remplacer les actions courantes faites dans Portainer par une interface Discord propre, maintenable et extensible.
 
 ---
 
-# ✨ Fonctionnalités
+## Fonctionnalités
 
-## ✅ Actuellement disponibles
+### Disponible en v0.6.0
 
-- Bot Discord
-- Architecture modulaire (Cogs)
-- Logger personnalisé
-- Configuration via `.env`
-- Docker SDK
-- Architecture en couches
-- Gestion des erreurs Docker
-- Permissions
-- Embeds personnalisés
-- Boutons de confirmation
-- Dashboard Discord (première version)
-- Configuration persistante du container Docker
+- Commandes slash avec discord.py 2.6+
+- Architecture modulaire avec Cogs
+- Architecture orientée services
+- Configuration via .env et configuration persistante
+- Connexion au Docker SDK
+- Gestion du conteneur Minecraft Docker
+- Permissions par rôle Discord
+- Embeds Discord dédiés
+- Boutons interactifs
+- Dashboard Discord permanent
+- Boutons persistants après redémarrage du bot
+- Actualisation automatique du dashboard toutes les 15 secondes
+- Sauvegarde du message dashboard dans data/dashboard.json
 
-### Commandes
+### Dashboard permanent
 
-```
+Le dashboard crée un seul message Discord et enregistre guild_id, channel_id et message_id dans data/dashboard.json.
+
+Boutons disponibles :
+
+- Start
+- Stop
+- Restart
+- Refresh
+
+Chaque bouton possède un custom_id, ce qui permet à Discord de continuer à router les interactions après un redémarrage du bot.
+
+---
+
+## Commandes
+
+```text
 /ping
 /status
 
-/setup                    # Configure le container Docker par défaut
+/setup [container]
+
 /server status
 /server start
 /server stop
 /server restart
 
-/dashboard
+/dashboard create
+/dashboard delete
+/dashboard refresh
 ```
 
-**Plus de détails sur `/setup` :** Consulter [SETUP.md](SETUP.md)
+### /setup
+
+Configure le conteneur Docker Minecraft utilisé par le bot.
+
+- Avec un nom : /setup container:nom_du_conteneur
+- Sans argument : le bot affiche une liste de conteneurs Docker disponibles
+
+Le conteneur peut aussi être défini avec la variable d'environnement DOCKER_CONTAINER.
+
+### /dashboard create
+
+Crée le dashboard permanent dans le salon courant. Si un dashboard existe déjà dans data/dashboard.json, la commande refuse d'en créer un deuxième.
+
+### /dashboard delete
+
+Supprime le message dashboard enregistré, puis nettoie data/dashboard.json.
+
+### /dashboard refresh
+
+Force la mise à jour du dashboard enregistré.
 
 ---
 
-# 🗂 Architecture
+## Installation
 
-```
-atm10-discord-manager/
-│
-├── bot/
-│   ├── cogs/
-│   ├── embeds/
-│   ├── exceptions/
-│   ├── models/
-│   ├── services/
-│   ├── tasks/
-│   ├── utils/
-│   ├── views/
-│   ├── config.py
-│   ├── logger.py
-│   └── main.py
-│
-├── config/
-├── data/
-├── docker/
-├── logs/
-├── tests/
-│
-├── CHANGELOG.md
-├── LICENSE
-├── README.md
-├── requirements.txt
-└── .env
+### Prérequis
+
+- Python 3.13
+- Docker
+- Accès au socket Docker
+- Un bot Discord avec les intents nécessaires
+
+### Dépendances
+
+```bash
+pip install -r requirements.txt
 ```
 
----
+### Configuration
 
-# 🏗 Architecture logicielle
+Créer un fichier .env à la racine du projet :
 
+```env
+DISCORD_TOKEN=token_du_bot
+AUTHORIZED_ROLE=Admin
+DOCKER_CONTAINER=nom_du_conteneur_minecraft
 ```
-Discord
 
-      │
+DOCKER_CONTAINER est optionnel si le conteneur est configuré avec /setup.
 
-      ▼
+### Lancement
 
-Discord Cogs
-
-      │
-
-      ▼
-
-MinecraftService
-
-      │
-
-      ▼
-
-DockerService
-
-      │
-
-      ▼
-
-Docker Engine
+```bash
+python -m bot.main
 ```
 
 ---
 
-# 🐳 Docker
+## Déploiement Portainer
 
-Le bot est conçu pour fonctionner sur Debian.
+Le projet fournit un Dockerfile, un docker-compose.yml et une image GitHub Container Registry.
 
-Connexion via :
+Image par défaut :
 
+```text
+ghcr.io/choupivip/atm10-discord-manager:latest
 ```
+
+Dans Portainer :
+
+1. Créer une nouvelle Stack.
+2. Coller le contenu de docker-compose.yml.
+3. Ajouter les variables DISCORD_TOKEN, AUTHORIZED_ROLE et DOCKER_CONTAINER.
+4. Déployer la stack.
+
+Le compose monte le socket Docker pour permettre au bot de gérer le conteneur Minecraft :
+
+```yaml
+volumes:
+  - /var/run/docker.sock:/var/run/docker.sock
+```
+
+Les données persistantes du bot sont stockées dans les volumes Docker atm10-discord-manager-data et atm10-discord-manager-logs.
+
+### Build local
+
+```bash
+docker build -t atm10-discord-manager:local .
+docker compose up -d
+```
+
+### Publication GitHub automatique
+
+Le workflow .github/workflows/docker.yml construit et publie automatiquement l'image sur GHCR lors des push sur main/master et lors des tags v*.*.*.
+
+---
+## Docker
+
+Le bot communique avec Docker via le Docker SDK Python. Sur un hôte Linux, il doit avoir accès au socket Docker :
+
+```text
 /var/run/docker.sock
 ```
 
-Montage Docker :
+Exemple de montage avec Docker Compose :
 
 ```yaml
 volumes:
@@ -144,123 +182,115 @@ volumes:
 
 ---
 
-# 🛠 Technologies
+## Architecture
 
-- Python 3.13
-- discord.py
-- Docker SDK for Python
-- python-dotenv
-- Docker
-- Git
-- GitHub
+```text
+atm10-discord-manager/
+├── bot/
+│   ├── cogs/
+│   │   ├── dashboard.py
+│   │   ├── ping.py
+│   │   ├── server.py
+│   │   ├── setup.py
+│   │   └── status.py
+│   ├── embeds/
+│   │   ├── dashboard_embed.py
+│   │   └── server_embed.py
+│   ├── services/
+│   │   ├── dashboard_service.py
+│   │   ├── docker_service.py
+│   │   └── minecraft_service.py
+│   ├── tasks/
+│   │   └── dashboard_task.py
+│   ├── views/
+│   │   ├── confirm_view.py
+│   │   └── dashboard_view.py
+│   ├── config.py
+│   ├── config_manager.py
+│   ├── logger.py
+│   └── main.py
+├── data/
+├── logs/
+├── tests/
+├── .dockerignore
+├── .env.example
+├── Dockerfile
+├── docker-compose.yml
+├── README.md
+├── CHANGELOG.md
+└── requirements.txt
+```
+
+### Flux principal
+
+```text
+Discord Slash Commands / Buttons
+        |
+        v
+Cogs and Views
+        |
+        v
+MinecraftService
+        |
+        v
+DockerService
+        |
+        v
+Docker Engine
+```
+
+### Services
+
+- DashboardService : persistance du message dashboard dans data/dashboard.json
+- MinecraftService : actions métier start, stop, restart, status
+- DockerService : communication avec le Docker SDK
 
 ---
 
-# 🗺 Roadmap
+## Roadmap
 
-## ✅ v0.1.0
-
-- Création du bot
-- Première commande Slash
-
----
-
-## ✅ v0.2.0
-
-- Architecture modulaire
-- Logger
-- Configuration
-
----
-
-## ✅ v0.3.0
-
-- Docker SDK
-- DockerService
-
----
-
-## ✅ v0.4.0
-
-- MinecraftService
-- Architecture en couches
-- `/server status`
-
----
-
-## ✅ v0.5.0
-
-- `/server start`
-- `/server stop`
-- `/server restart`
-- Gestion des permissions
-- Gestion des erreurs Docker
-- Embeds personnalisés
-- Boutons de confirmation
-- Dashboard Discord (v1)
-
----
-
-## 🚧 v0.6.0
+### v0.6.0
 
 - Dashboard permanent
 - Actualisation automatique
 - Boutons persistants
 - Sauvegarde de l'ID du message
 
----
-
-## 🚧 v0.7.0
+### v0.7.0
 
 - Connexion RCON
-- Liste des joueurs
-- Messages Minecraft
+- Liste des joueurs réelle
+- Commandes Minecraft depuis Discord
 - Sauvegarde du monde
 
----
+### v0.8.0
 
-## 🚧 v0.8.0
-
-- Lecture des logs
-- Détection des connexions
+- Lecture des logs Minecraft
+- Détection des connexions et déconnexions
 - Détection des morts
 - Détection des crashs
 
----
+### v0.9.0
 
-## 🚧 v0.9.0
-
-- Sauvegardes automatiques
+- Backups automatiques
 - Notifications Discord
-- Statistiques serveur
+- Monitoring avancé
+- CPU, RAM, disque, TPS en temps réel
+
+### v1.0.0
+
+- Version stable
+- Dashboard complet proche de Pterodactyl
+- Gestion serveur, logs, backups, monitoring et notifications
 
 ---
 
-## 🎉 v1.0.0
+## Qualité
 
-Première version stable.
-
-Fonctionnalités prévues :
-
-- Gestion complète du serveur
-- Dashboard interactif
-- Docker
-- RCON
-- Sauvegardes
-- Surveillance
-- Gestion des permissions
-- Déploiement Docker Compose
+Le projet vise une base professionnelle : PEP8, Cogs Discord propres, slash commands, services séparés, logger centralisé et code extensible vers RCON, logs, backups et monitoring.
 
 ---
 
-# 🎯 Objectif
+## Auteur
 
-Créer un véritable panneau d'administration Discord permettant de gérer entièrement un serveur Minecraft sans ouvrir Portainer.
-
----
-
-# 👨‍💻 Auteur
-
-Développé par **Choupivip**
-
-Projet personnel réalisé autour d'un serveur privé **All the Mods 10: To the Sky**.
+Développé par Choupivip pour un serveur privé All the Mods 10: To the Sky.

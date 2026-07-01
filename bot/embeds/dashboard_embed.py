@@ -1,59 +1,74 @@
 from datetime import datetime
+from typing import Any
 
 import discord
 
 
 class DashboardEmbed:
+    """Factory for the persistent Minecraft dashboard embed."""
 
     @staticmethod
-    def create(info: dict):
-
-        status = "🟢 En ligne" if info["status"] == "running" else "🔴 Hors ligne"
+    def create(info: dict[str, Any]) -> discord.Embed:
+        """Build a modern status embed from a Minecraft status snapshot."""
+        status = info.get("status", "unknown")
+        is_running = info.get("success") and status == "running"
+        color = discord.Color.green() if is_running else discord.Color.red()
+        server_status = "🟢 En ligne" if is_running else "🔴 Hors ligne"
 
         embed = discord.Embed(
-            title="🎮 ATM10 TO THE SKY",
-            description="Dashboard du serveur Minecraft",
-            color=discord.Color.blurple()
+            title="ATM10 To The Sky",
+            description="Dashboard permanent du serveur Minecraft Docker",
+            color=color,
+            timestamp=datetime.now(),
         )
 
+        embed.add_field(name="Serveur", value=server_status, inline=True)
+        embed.add_field(name="Docker", value=DashboardEmbed._value(status), inline=True)
         embed.add_field(
-            name="🖥 Serveur",
-            value=status,
-            inline=False
+            name="Nom du conteneur",
+            value=DashboardEmbed._value(info.get("name")),
+            inline=True,
         )
-
         embed.add_field(
-            name="🐳 Docker",
-            value=info["status"],
-            inline=True
+            name="CPU",
+            value=DashboardEmbed._value(info.get("cpu")),
+            inline=True,
         )
-
         embed.add_field(
-            name="📦 Conteneur",
-            value=info["name"],
-            inline=True
+            name="RAM",
+            value=DashboardEmbed._value(info.get("ram")),
+            inline=True,
         )
-
         embed.add_field(
-            name="👥 Joueurs",
-            value="Bientôt...",
-            inline=True
+            name="Disque",
+            value=DashboardEmbed._value(info.get("disk", "Bientôt")),
+            inline=True,
         )
-
         embed.add_field(
-            name="🧠 RAM",
-            value="Bientôt...",
-            inline=True
+            name="Uptime",
+            value=DashboardEmbed._value(info.get("uptime")),
+            inline=True,
         )
+        embed.add_field(name="Joueurs", value="0 / 0", inline=True)
+        embed.add_field(name="TPS", value="Bientôt", inline=True)
 
-        embed.add_field(
-            name="⚡ CPU",
-            value="Bientôt...",
-            inline=True
-        )
+        if not info.get("success") and info.get("error"):
+            embed.add_field(
+                name="Diagnostic",
+                value=DashboardEmbed._trim(str(info["error"])),
+                inline=False,
+            )
 
-        embed.set_footer(
-            text=f"Dernière mise à jour : {datetime.now().strftime('%H:%M:%S')}"
-        )
-
+        updated_at = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+        embed.set_footer(text=f"Dernière mise à jour : {updated_at}")
         return embed
+
+    @staticmethod
+    def _value(value: Any) -> str:
+        return str(value) if value not in (None, "") else "N/A"
+
+    @staticmethod
+    def _trim(value: str, limit: int = 900) -> str:
+        if len(value) <= limit:
+            return value
+        return f"{value[:limit - 3]}..."
