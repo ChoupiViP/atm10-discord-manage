@@ -2,61 +2,74 @@ from typing import Any
 
 import discord
 
-from bot.services.rcon_service import PlayerList
-
 
 class MinecraftEmbed:
-    """Factory for Minecraft RCON command embeds."""
+    """Factory des embeds Minecraft."""
 
     @staticmethod
-    def players(players: PlayerList) -> discord.Embed:
-        """Build an embed for the online player list."""
-        names = "\n".join(f"- {name}" for name in players.names)
-        names = names or "Aucun joueur en ligne"
+    def players(response: str) -> discord.Embed:
+        """Affiche la réponse de la commande /list."""
+
+        response = response.strip() or "Aucun joueur en ligne."
+
         embed = discord.Embed(
-            title="Joueurs Minecraft",
-            description=names,
-            color=discord.Color.green(),
+            title="👥 Joueurs connectés",
+            description=f"```text\n{response}\n```",
+            color=discord.Color.green()
         )
-        embed.add_field(name="Connectés", value=players.summary, inline=True)
+
         return embed
 
     @staticmethod
     def command(command: str, response: str) -> discord.Embed:
-        """Build an embed for a raw RCON command response."""
+        """Embed générique pour une commande RCON."""
+
         embed = discord.Embed(
-            title="Commande Minecraft",
-            color=discord.Color.blurple(),
+            title="📡 Commande Minecraft",
+            color=discord.Color.blurple()
         )
-        embed.add_field(name="Commande", value=f"/{command}", inline=False)
+
+        embed.add_field(
+            name="Commande",
+            value=f"`/{command}`",
+            inline=False
+        )
+
         embed.add_field(
             name="Réponse",
             value=MinecraftEmbed._format_response(response),
-            inline=False,
+            inline=False
         )
+
         return embed
 
     @staticmethod
     def success(title: str, response: str) -> discord.Embed:
-        """Build a generic success embed."""
+
         return discord.Embed(
-            title=title,
+            title=f"✅ {title}",
             description=MinecraftEmbed._format_response(response),
-            color=discord.Color.green(),
+            color=discord.Color.green()
         )
 
     @staticmethod
     def error(message: Any) -> discord.Embed:
-        """Build a generic error embed."""
+
         return discord.Embed(
-            title="Erreur Minecraft",
+            title="❌ Erreur",
             description=str(message),
-            color=discord.Color.red(),
+            color=discord.Color.red()
         )
 
     @staticmethod
     def _format_response(response: str) -> str:
-        response = response.strip() or "Commande exécutée."
+
+        response = response.strip()
+
+        if not response:
+            response = "Commande exécutée."
+
         if len(response) > 3900:
-            response = f"{response[:3897]}..."
+            response = response[:3897] + "..."
+
         return f"```text\n{response}\n```"
