@@ -2,7 +2,7 @@ import os
 
 from dotenv import load_dotenv
 
-from bot.config_manager import ConfigManager
+from bot.services.config_service import ConfigService
 
 load_dotenv()
 
@@ -25,7 +25,7 @@ class Config:
         if env_container:
             return env_container
 
-        persisted_container = ConfigManager.get_docker_container()
+        persisted_container = ConfigService.get_docker_container()
         if persisted_container:
             return persisted_container
 
