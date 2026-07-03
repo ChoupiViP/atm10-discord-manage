@@ -35,9 +35,26 @@ jobs:
         with:
           images: ghcr.io/${{ steps.vars.outputs.owner }}/atm10-discord-manager
           tags: |
+            # latest sur la branche principale
             type=raw,value=latest,enable={{is_default_branch}}
+
+            # master ou main
+            type=ref,event=branch
+
+            # v0.6.0
             type=ref,event=tag
+
+            # sha-xxxxxxxx
             type=sha,prefix=sha-
+
+            # date
+            type=raw,value={{date 'YYYYMMDD-HHmmss'}}
+
+          labels: |
+            org.opencontainers.image.title=ATM10 Discord Manager
+            org.opencontainers.image.description=Discord bot for ATM10 server management
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.version=${{ github.ref_name }}
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
@@ -46,7 +63,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push Docker image
+      - name: Build and Push
         uses: docker/build-push-action@v6
         with:
           context: .
