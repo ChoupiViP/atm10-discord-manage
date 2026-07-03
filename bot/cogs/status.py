@@ -22,7 +22,7 @@ class Status(commands.Cog):
 
         embed.add_field(
             name="Version",
-            value="v0.2",
+            value="v0.6",
             inline=True
         )
 

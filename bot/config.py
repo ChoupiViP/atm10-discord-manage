@@ -17,7 +17,6 @@ class Config:
     RCON_PASSWORD = os.getenv("RCON_PASSWORD")
     RCON_PORT = int(os.getenv("RCON_PORT", "25575"))
     RCON_TIMEOUT = int(os.getenv("RCON_TIMEOUT", "5"))
-    MC_SAVE_COMMAND = os.getenv("MC_SAVE_COMMAND", "save-all flush")
 
     @classmethod
     def get_docker_container(cls) -> str:

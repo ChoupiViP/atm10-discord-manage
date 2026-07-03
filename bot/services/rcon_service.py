@@ -1,96 +1,122 @@
-import re
-from dataclasses import dataclass
+from mctools import RCONClient
 
-from mcrcon import MCRcon
-
-from bot.config import Config
 from bot.logger import logger
-
-
-@dataclass(slots=True)
-class PlayerList:
-    """Parsed Minecraft player list returned by the RCON list command."""
-
-    online: int
-    maximum: int
-    names: list[str]
-    raw: str
-
-    @property
-    def summary(self) -> str:
-        """Return a compact player count for embeds."""
-        return f"{self.online} / {self.maximum}"
+from bot.services.config_service import ConfigService
 
 
 class RconService:
-    """Minecraft RCON client wrapper."""
+    """Service de communication avec le serveur Minecraft via RCON."""
 
-    LIST_PATTERN = re.compile(
-        r"There are (?P<online>\d+) of a max of (?P<maximum>\d+) players online",
-        re.IGNORECASE,
-    )
+    def __init__(self):
+        self.client = None
 
-    def __init__(
-        self,
-        host: str | None = None,
-        port: int | None = None,
-        password: str | None = None,
-        timeout: int | None = None,
-    ) -> None:
-        self.host = host or Config.RCON_HOST
-        self.port = port or Config.RCON_PORT
-        self.password = password or Config.RCON_PASSWORD
-        self.timeout = timeout or Config.RCON_TIMEOUT
+    # --------------------------------------------------
+    # Connexion
+    # --------------------------------------------------
 
-    def is_configured(self) -> bool:
-        """Return whether RCON credentials are configured."""
-        return bool(self.host and self.port and self.password)
+    def connect(self):
+        """Connexion au serveur RCON."""
 
-    def command(self, command: str) -> str:
-        """Run a raw Minecraft command through RCON."""
-        if not self.is_configured():
-            raise ValueError("RCON non configuré")
+        config = ConfigService.get_rcon()
 
-        safe_command = command.strip().lstrip("/")
-        if not safe_command:
-            raise ValueError("Commande Minecraft vide")
+        if not config:
+            raise ValueError("Configuration RCON introuvable.")
 
-        logger.info("Commande RCON exécutée: %s", safe_command)
-        with MCRcon(
-            self.host,
-            self.password,
-            port=self.port,
-            timeout=self.timeout,
-        ) as client:
-            return client.command(safe_command)
+        if not config.get("host"):
+            raise ValueError("Host RCON non configuré.")
 
-    def list_players(self) -> PlayerList:
-        """Return the current Minecraft player list."""
-        response = self.command("list")
-        match = self.LIST_PATTERN.search(response)
+        if not config.get("port"):
+            raise ValueError("Port RCON non configuré.")
 
-        online = int(match.group("online")) if match else 0
-        maximum = int(match.group("maximum")) if match else 0
-        names = self._parse_names(response)
+        if not config.get("password"):
+            raise ValueError("Mot de passe RCON non configuré.")
 
-        return PlayerList(
-            online=online,
-            maximum=maximum,
-            names=names,
-            raw=response,
+        self.client = RCONClient(
+            config["host"],
+            port=int(config["port"])
         )
 
-    def save_world(self) -> str:
-        """Ask Minecraft to flush the world to disk."""
-        return self.command(Config.MC_SAVE_COMMAND)
+        self.client.login(config["password"])
 
-    @staticmethod
-    def _parse_names(response: str) -> list[str]:
-        if ":" not in response:
-            return []
+        logger.info(
+            f"Connexion RCON établie ({config['host']}:{config['port']})"
+        )
 
-        names_part = response.split(":", 1)[1].strip()
-        if not names_part:
-            return []
+    # --------------------------------------------------
+    # Déconnexion
+    # --------------------------------------------------
 
-        return [name.strip() for name in names_part.split(",") if name.strip()]
+    def disconnect(self):
+        """Ferme la connexion RCON."""
+
+        if self.client:
+
+            try:
+                self.client.stop()
+
+            except Exception:
+                pass
+
+            self.client = None
+
+    # --------------------------------------------------
+    # Commande générique
+    # --------------------------------------------------
+
+    def command(self, command: str):
+        """Exécute une commande RCON."""
+
+        try:
+
+            self.connect()
+
+            logger.info(f"Commande RCON : {command}")
+
+            response = self.client.command(command)
+
+            return response
+
+        finally:
+
+            self.disconnect()
+
+    # --------------------------------------------------
+    # Méthodes Minecraft
+    # --------------------------------------------------
+
+    def list_players(self):
+        return self.command("list")
+
+    def say(self, message: str):
+        return self.command(f"say {message}")
+
+    def save_all(self):
+        return self.command("save-all")
+
+    def save_off(self):
+        return self.command("save-off")
+
+    def save_on(self):
+        return self.command("save-on")
+
+    def stop(self):
+        return self.command("stop")
+
+    def time(self):
+        return self.command("time query daytime")
+
+    def weather(self):
+        return self.command("weather query")
+
+    def difficulty(self):
+        return self.command("difficulty")
+
+    def whitelist(self):
+        return self.command("whitelist list")
+
+    def version(self):
+        return self.command("version")
+
+    def execute(self, command: str):
+        """Alias plus explicite de command()."""
+        return self.command(command)
