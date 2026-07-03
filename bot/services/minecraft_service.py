@@ -2,81 +2,93 @@ from typing import Any
 
 from bot.logger import logger
 from bot.services.docker_service import DockerService
-from bot.services.rcon_service import PlayerList, RconService
+from bot.services.rcon_service import RconService
 
 
 class MinecraftService:
-    """Application service for Minecraft server operations."""
+    """Service principal de gestion du serveur Minecraft."""
 
     def __init__(
         self,
         docker_service: DockerService | None = None,
         rcon_service: RconService | None = None,
-    ) -> None:
+    ):
         self.docker = docker_service or DockerService()
         self.rcon = rcon_service or RconService()
 
+    # --------------------------------------------------
+    # Docker
+    # --------------------------------------------------
+
     def status(self) -> dict[str, Any]:
-        """Return the current Minecraft server status."""
+        """Retourne l'état du serveur."""
         info = self.docker.get_status()
         info.update(self._player_status())
         return info
 
     def get_status(self) -> dict[str, Any]:
-        """Backward-compatible alias used by existing cogs."""
         return self.status()
 
-    def start(self) -> None:
-        """Start the Minecraft server container."""
+    def start(self):
         self.docker.start_container()
 
-    def stop(self) -> None:
-        """Stop the Minecraft server container."""
+    def stop(self):
         self.docker.stop_container()
 
-    def restart(self) -> None:
-        """Restart the Minecraft server container."""
+    def restart(self):
         self.docker.restart_container()
 
-    def command(self, command: str) -> str:
-        """Run a Minecraft command through RCON."""
+    # --------------------------------------------------
+    # RCON
+    # --------------------------------------------------
+
+    def command(self, command: str):
         return self.rcon.command(command)
 
-    def list_players(self) -> PlayerList:
-        """Return online players through RCON."""
+    def list_players(self):
         return self.rcon.list_players()
 
-    def save_world(self) -> str:
-        """Save the Minecraft world through RCON."""
-        return self.rcon.save_world()
+    def say(self, message: str):
+        return self.rcon.say(message)
+
+    def save_all(self):
+        return self.rcon.save_all()
+
+    def save_off(self):
+        return self.rcon.save_off()
+
+    def save_on(self):
+        return self.rcon.save_on()
+
+    def stop_server(self):
+        return self.rcon.stop()
+
+    # --------------------------------------------------
+    # Dashboard
+    # --------------------------------------------------
 
     def _player_status(self) -> dict[str, Any]:
-        if not self.rcon.is_configured():
-            return {
-                "players_online": 0,
-                "players_max": 0,
-                "players": [],
-                "players_summary": "RCON non configuré",
-                "rcon_success": False,
-            }
+        """
+        Récupère les informations sur les joueurs connectés.
+        """
 
         try:
-            players = self.rcon.list_players()
-        except Exception as exc:
-            logger.warning("Impossible de récupérer les joueurs via RCON: %s", exc)
+
+            response = self.rcon.list_players()
+
             return {
-                "players_online": 0,
-                "players_max": 0,
-                "players": [],
-                "players_summary": "RCON indisponible",
-                "rcon_success": False,
-                "rcon_error": str(exc),
+                "players_summary": response,
+                "rcon_success": True
             }
 
-        return {
-            "players_online": players.online,
-            "players_max": players.maximum,
-            "players": players.names,
-            "players_summary": players.summary,
-            "rcon_success": True,
-        }
+        except Exception as exc:
+
+            logger.warning(
+                f"Impossible de récupérer les joueurs : {exc}"
+            )
+
+            return {
+                "players_summary": "RCON indisponible",
+                "rcon_success": False,
+                "rcon_error": str(exc)
+            }
