@@ -3,10 +3,14 @@ services:
     image: ${BOT_IMAGE:-ghcr.io/choupivip/atm10-discord-manager:latest}
     container_name: atm10-discord-manager
     restart: unless-stopped
+    env_file: .env
     environment:
       DISCORD_TOKEN: ${DISCORD_TOKEN}
       AUTHORIZED_ROLE: ${AUTHORIZED_ROLE:-Admin}
       DOCKER_CONTAINER: ${DOCKER_CONTAINER}
+      RCON_HOST: ${RCON_HOST:-host.docker.internal}
+      RCON_PORT: ${RCON_PORT:-25575}
+      RCON_PASSWORD: ${RCON_PASSWORD}
       TZ: ${TZ:-Europe/Paris}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock

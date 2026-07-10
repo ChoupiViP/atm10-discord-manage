@@ -62,8 +62,12 @@ class ConfigService:
         try:
 
             with open(cls.CONFIG_FILE, "r", encoding="utf-8") as file:
+                content = file.read()
 
-                config = json.load(file)
+            if not content.strip():
+                raise ValueError("Fichier de configuration vide")
+
+            config = json.loads(content)
 
             config = cls._merge_defaults(config)
 
