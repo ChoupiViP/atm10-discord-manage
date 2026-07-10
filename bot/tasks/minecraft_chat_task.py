@@ -28,6 +28,8 @@ class MinecraftChatTask:
         self.queue: asyncio.Queue[str] = asyncio.Queue()
         self.thread: threading.Thread | None = None
         self.task: asyncio.Task | None = None
+        self._logs_channel_id: int | None = None
+        self._logs_channel: discord.TextChannel | None = None
 
     def start(self) -> None:
         if self.task is None or self.task.done():
@@ -107,6 +109,35 @@ class MinecraftChatTask:
             )
             await channel.send(embed=embed)
 
+    async def _get_logs_channel(self) -> discord.TextChannel | None:
+        channel_id = ConfigService.get_logs_channel()
+        if channel_id is None:
+            self._logs_channel_id = None
+            self._logs_channel = None
+            return None
+
+        if self._logs_channel_id == channel_id and self._logs_channel is not None:
+            return self._logs_channel
+
+        self._logs_channel_id = channel_id
+        channel = self.bot.get_channel(channel_id)
+        if channel is not None and isinstance(channel, discord.TextChannel):
+            self._logs_channel = channel
+            return channel
+
+        try:
+            fetched = await self.bot.fetch_channel(channel_id)
+        except discord.NotFound:
+            self._logs_channel = None
+            return None
+
+        if isinstance(fetched, discord.TextChannel):
+            self._logs_channel = fetched
+            return fetched
+
+        self._logs_channel = None
+        return None
+
     def _is_discord_bridge_line(self, line: str) -> bool:
         return self._DISCORD_BRIDGE in line
 
@@ -116,19 +147,3 @@ class MinecraftChatTask:
             return None
 
         return match.group(1).strip()
-
-    async def _get_logs_channel(self) -> discord.TextChannel | None:
-        channel_id = ConfigService.get_logs_channel()
-        if channel_id is None:
-            return None
-
-        channel = self.bot.get_channel(channel_id)
-        if channel is not None and isinstance(channel, discord.TextChannel):
-            return channel
-
-        try:
-            fetched = await self.bot.fetch_channel(channel_id)
-        except discord.NotFound:
-            return None
-
-        return fetched if isinstance(fetched, discord.TextChannel) else None
