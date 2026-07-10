@@ -81,12 +81,12 @@ class DockerService:
             stats = container.stats(stream=False)
         except DockerException as exc:
             logger.warning("Stats Docker indisponibles: %s", exc)
-            return {"cpu": "N/A", "ram": "N/A", "disk": "Bientôt"}
+            return {"cpu": "N/A", "ram": "N/A", "disk": self._get_disk_usage(container)}
 
         return {
             "cpu": self._format_cpu(stats),
             "ram": self._format_memory(stats),
-            "disk": "Bientôt",
+            "disk": self._get_disk_usage(container),
         }
 
     @staticmethod
@@ -125,6 +125,30 @@ class DockerService:
 
         limit_mib = limit / 1024 / 1024
         return f"{usage_mib:.0f} / {limit_mib:.0f} MiB"
+
+    def _get_disk_usage(self, container) -> str:
+        try:
+            info = self.client.api.inspect_container(container.id, size=True)
+            size_rootfs = info.get("SizeRootFs")
+            if size_rootfs is None:
+                return "N/A"
+            return self._format_size(size_rootfs)
+        except DockerException as exc:
+            logger.warning("Disk Docker indisponible: %s", exc)
+            return "N/A"
+
+    @staticmethod
+    def _format_size(value: int) -> str:
+        if value < 1024:
+            return f"{value} B"
+        kib = value / 1024
+        if kib < 1024:
+            return f"{kib:.1f} KiB"
+        mib = kib / 1024
+        if mib < 1024:
+            return f"{mib:.1f} MiB"
+        gib = mib / 1024
+        return f"{gib:.1f} GiB"
 
     @staticmethod
     def _image_name(container) -> str:
