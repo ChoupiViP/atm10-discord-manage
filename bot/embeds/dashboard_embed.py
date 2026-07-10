@@ -11,12 +11,13 @@ class DashboardEmbed:
     def create(info: dict[str, Any]) -> discord.Embed:
         """Build a modern status embed from a Minecraft status snapshot."""
         status = info.get("status", "unknown")
-        is_running = info.get("success") and status == "running"
-        color = discord.Color.green() if is_running else discord.Color.red()
-        server_status = "🟢 En ligne" if is_running else "🔴 Hors ligne"
+        container_running = info.get("success") and status == "running"
+        server_online = info.get("rcon_success") is True
+        color = discord.Color.green() if container_running and server_online else discord.Color.red()
+        server_status = "🟢 En ligne" if server_online else "🔴 Hors ligne"
 
         embed = discord.Embed(
-            title="ATM10 To The Sky",
+            title="Manager Server Minecraft",
             description="Dashboard permanent du serveur Minecraft Docker",
             color=color,
             timestamp=datetime.now(),

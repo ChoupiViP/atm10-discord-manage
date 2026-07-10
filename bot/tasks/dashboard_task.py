@@ -28,9 +28,9 @@ class DashboardTask:
         """Stop the refresh loop."""
         self.refresh_dashboard.cancel()
 
-    @tasks.loop(seconds=15)
+    @tasks.loop(seconds=30)
     async def refresh_dashboard(self) -> None:
-        """Refresh the registered dashboard message every 15 seconds."""
+        """Refresh the registered dashboard message every 30 seconds."""
         if not self.dashboard.exists():
             return
 
@@ -51,6 +51,12 @@ class DashboardTask:
         except discord.Forbidden:
             logger.warning("Permissions insuffisantes pour rafraîchir le dashboard")
         except discord.HTTPException as exc:
+            if getattr(exc, 'status', None) == 429:
+                logger.warning(
+                    "Rate limit lors du refresh dashboard, pause de 10 secondes"
+                )
+                await asyncio.sleep(10)
+                return
             logger.warning("Erreur Discord pendant le refresh dashboard: %s", exc)
         except Exception:
             logger.exception("Erreur inattendue pendant le refresh dashboard")

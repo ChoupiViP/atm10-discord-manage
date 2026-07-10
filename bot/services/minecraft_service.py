@@ -13,12 +13,16 @@ class MinecraftService:
         r"There are (\d+) of a maximum of (\d+) players",
         re.IGNORECASE,
     )
+    _PLAYERS_SHORT_PATTERN = re.compile(
+        r"There are (\d+) of a max(?:imum)? of (\d+) players",
+        re.IGNORECASE,
+    )
     _PLAYERS_FALLBACK_PATTERN = re.compile(
-        r"(\d+)\s*/\s*(\d+)\s*players",
+        r"(\d+)\s*/\s*(\d+)\s*(?:players|slots)?",
         re.IGNORECASE,
     )
     _TPS_MULTI_PATTERN = re.compile(
-        r"from last.*?(\d+(?:\.\d+)?),\s*(\d+(?:\.\d+)?),\s*(\d+(?:\.\d+)?)",
+        r"(?:from last.*?:|last.*?:)\s*(\d+(?:\.\d+)?),\s*(\d+(?:\.\d+)?),\s*(\d+(?:\.\d+)?)",
         re.IGNORECASE,
     )
     _TPS_SINGLE_PATTERN = re.compile(r"(\d+(?:\.\d+)?)")
@@ -78,6 +82,9 @@ class MinecraftService:
     def stop_server(self):
         return self.rcon.stop()
 
+    def tps(self):
+        return self.rcon.tps()
+
     # --------------------------------------------------
     # Dashboard
     # --------------------------------------------------
@@ -98,6 +105,11 @@ class MinecraftService:
         try:
             response = self.rcon.list_players()
             players, max_players = self._parse_player_counts(response)
+            if players == 0 and max_players == 0 and response:
+                logger.warning(
+                    "Réponse list RCON non reconnue : %s", response
+                )
+
             result.update(
                 {
                     "players_summary": response,
@@ -118,6 +130,10 @@ class MinecraftService:
         try:
             tps_response = self.rcon.tps()
             result["tps"] = self._parse_tps(tps_response)
+            if result["tps"] == "N/A" and tps_response:
+                logger.warning(
+                    "Réponse tps RCON non reconnue : %s", tps_response
+                )
         except Exception as exc:
             logger.warning("Impossible de récupérer le TPS : %s", exc)
             result["tps"] = "N/A"
@@ -127,11 +143,14 @@ class MinecraftService:
     def _parse_player_counts(self, response: str) -> tuple[int, int]:
         match = self._PLAYERS_PATTERN.search(response)
         if not match:
+            match = self._PLAYERS_SHORT_PATTERN.search(response)
+        if not match:
             match = self._PLAYERS_FALLBACK_PATTERN.search(response)
 
         if match:
             return int(match.group(1)), int(match.group(2))
 
+        logger.warning("Aucun format de joueurs reconnu dans la réponse RCON : %s", response)
         return 0, 0
 
     def _parse_tps(self, response: str) -> str:

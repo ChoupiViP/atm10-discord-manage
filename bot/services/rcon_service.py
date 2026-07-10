@@ -103,7 +103,29 @@ class RconService:
         return self.command("stop")
 
     def tps(self):
-        return self.command("tps")
+        response = self.command("tps")
+
+        if self._is_unknown_command(response):
+            logger.info("Commande RCON 'tps' non supportée, tentative de 'forge tps'")
+            response = self.command("forge tps")
+
+        if self._is_unknown_command(response):
+            logger.info("Commande RCON 'forge tps' non supportée, tentative de 'neoforge tps'")
+            response = self.command("neoforge tps")
+
+        return response
+
+    @staticmethod
+    def _is_unknown_command(response: str) -> bool:
+        if not isinstance(response, str):
+            return False
+
+        lowered = response.strip().lower()
+        return (
+            "unknown or incomplete command" in lowered
+            or "unknown command" in lowered
+            or "incomplete command" in lowered
+        )
 
     def time(self):
         return self.command("time query daytime")
