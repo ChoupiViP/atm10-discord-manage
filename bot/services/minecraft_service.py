@@ -25,6 +25,10 @@ class MinecraftService:
         r"(?:from last.*?:|last.*?:)\s*(\d+(?:\.\d+)?),\s*(\d+(?:\.\d+)?),\s*(\d+(?:\.\d+)?)",
         re.IGNORECASE,
     )
+    _TPS_OVERALL_PATTERN = re.compile(
+        r"Overall:\s*(\d+(?:\.\d+)?)\s*TPS",
+        re.IGNORECASE,
+    )
     _TPS_SINGLE_PATTERN = re.compile(r"(\d+(?:\.\d+)?)")
 
     def __init__(
@@ -154,9 +158,13 @@ class MinecraftService:
         return 0, 0
 
     def _parse_tps(self, response: str) -> str:
+        match = self._TPS_OVERALL_PATTERN.search(response)
+        if match:
+            return f"{match.group(1)} TPS"
+
         match = self._TPS_MULTI_PATTERN.search(response)
         if match:
-            return ", ".join(match.groups())
+            return f"{match.group(1)} TPS"
 
         values = self._TPS_SINGLE_PATTERN.findall(response)
-        return ", ".join(values[:3]) if values else "N/A"
+        return f"{values[0]} TPS" if values else "N/A"
