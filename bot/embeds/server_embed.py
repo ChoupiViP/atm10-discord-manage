@@ -31,6 +31,18 @@ class ServerEmbed:
         )
 
         embed.add_field(
+            name="👥 Joueurs",
+            value=f"{info.get('players', 'N/A')} / {info.get('max_players', 'N/A')}",
+            inline=True
+        )
+
+        embed.add_field(
+            name="⏱️ TPS",
+            value=info.get("tps", "N/A"),
+            inline=True
+        )
+
+        embed.add_field(
             name="🏷️ Image",
             value=info["image"],
             inline=False

@@ -6,6 +6,28 @@ Le format suit les recommandations de Keep a Changelog.
 
 ---
 
+## [0.7.0] - 2026-07-11
+
+### Ajouté
+
+- Synchronisation du chat Minecraft ↔ Discord via le salon Logs.
+- Envoi automatique des messages de mort Minecraft dans le canal Logs.
+- Passage des messages Discord postés dans le salon Logs vers le chat Minecraft.
+- Filtrage des messages de retour pour éviter les boucles de chat.
+- Ajout de `bot/tasks/minecraft_chat_task.py` pour suivre les logs Docker Minecraft.
+- Ajout de `bot/cogs/minecraft_bridge.py` pour relayer Discord vers Minecraft.
+
+### Modifié
+
+- Extension de la configuration Logs pour servir de canal de logs et de chat.
+- Mise à jour du README pour documenter la synchronisation de chat et les notifications de mort.
+
+### Corrigé
+
+- Amélioration de la robustesse du pont chat Discord/Minecraft.
+
+---
+
 ## [0.6.0] - 2026-07-01
 
 ### Ajouté

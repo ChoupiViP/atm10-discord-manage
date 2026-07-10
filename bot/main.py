@@ -6,6 +6,7 @@ from discord.ext import commands
 from bot.config import Config
 from bot.logger import logger
 from bot.tasks.dashboard_task import DashboardTask
+from bot.tasks.minecraft_chat_task import MinecraftChatTask
 from bot.views.dashboard_view import DashboardView
 
 
@@ -30,6 +31,9 @@ class ATM10Bot(commands.Bot):
 
         self.dashboard_task = DashboardTask(self)
         self.dashboard_task.start()
+
+        self.minecraft_chat_task = MinecraftChatTask(self)
+        self.minecraft_chat_task.start()
 
         synced = await self.tree.sync()
         logger.info("%s commande(s) synchronisée(s).", len(synced))

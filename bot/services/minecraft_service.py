@@ -1,3 +1,4 @@
+import re
 from typing import Any
 
 from bot.logger import logger
@@ -7,6 +8,20 @@ from bot.services.rcon_service import RconService
 
 class MinecraftService:
     """Service principal de gestion du serveur Minecraft."""
+
+    _PLAYERS_PATTERN = re.compile(
+        r"There are (\d+) of a maximum of (\d+) players",
+        re.IGNORECASE,
+    )
+    _PLAYERS_FALLBACK_PATTERN = re.compile(
+        r"(\d+)\s*/\s*(\d+)\s*players",
+        re.IGNORECASE,
+    )
+    _TPS_MULTI_PATTERN = re.compile(
+        r"from last.*?(\d+(?:\.\d+)?),\s*(\d+(?:\.\d+)?),\s*(\d+(?:\.\d+)?)",
+        re.IGNORECASE,
+    )
+    _TPS_SINGLE_PATTERN = re.compile(r"(\d+(?:\.\d+)?)")
 
     def __init__(
         self,
@@ -69,26 +84,60 @@ class MinecraftService:
 
     def _player_status(self) -> dict[str, Any]:
         """
-        Récupère les informations sur les joueurs connectés.
+        Récupère les informations sur les joueurs connectés et le TPS.
         """
 
+        result = {
+            "players_summary": "RCON indisponible",
+            "players": 0,
+            "max_players": 0,
+            "tps": "N/A",
+            "rcon_success": False,
+        }
+
         try:
-
             response = self.rcon.list_players()
-
-            return {
-                "players_summary": response,
-                "rcon_success": True
-            }
+            players, max_players = self._parse_player_counts(response)
+            result.update(
+                {
+                    "players_summary": response,
+                    "players": players,
+                    "max_players": max_players,
+                    "rcon_success": True,
+                }
+            )
 
         except Exception as exc:
 
             logger.warning(
                 f"Impossible de récupérer les joueurs : {exc}"
             )
+            result["players_summary"] = "RCON indisponible"
+            result["rcon_error"] = str(exc)
 
-            return {
-                "players_summary": "RCON indisponible",
-                "rcon_success": False,
-                "rcon_error": str(exc)
-            }
+        try:
+            tps_response = self.rcon.tps()
+            result["tps"] = self._parse_tps(tps_response)
+        except Exception as exc:
+            logger.warning("Impossible de récupérer le TPS : %s", exc)
+            result["tps"] = "N/A"
+
+        return result
+
+    def _parse_player_counts(self, response: str) -> tuple[int, int]:
+        match = self._PLAYERS_PATTERN.search(response)
+        if not match:
+            match = self._PLAYERS_FALLBACK_PATTERN.search(response)
+
+        if match:
+            return int(match.group(1)), int(match.group(2))
+
+        return 0, 0
+
+    def _parse_tps(self, response: str) -> str:
+        match = self._TPS_MULTI_PATTERN.search(response)
+        if match:
+            return ", ".join(match.groups())
+
+        values = self._TPS_SINGLE_PATTERN.findall(response)
+        return ", ".join(values[:3]) if values else "N/A"

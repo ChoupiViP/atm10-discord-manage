@@ -49,8 +49,17 @@ class DashboardEmbed:
             value=DashboardEmbed._value(info.get("uptime")),
             inline=True,
         )
-        embed.add_field(name="Joueurs", value="0 / 0", inline=True)
-        embed.add_field(name="TPS", value="Bientôt", inline=True)
+
+        players = info.get("players")
+        max_players = info.get("max_players")
+        player_value = (
+            f"{players} / {max_players}"
+            if players is not None and max_players is not None
+            else "N/A"
+        )
+
+        embed.add_field(name="Joueurs", value=player_value, inline=True)
+        embed.add_field(name="TPS", value=DashboardEmbed._value(info.get("tps", "N/A")), inline=True)
 
         if not info.get("success") and info.get("error"):
             embed.add_field(

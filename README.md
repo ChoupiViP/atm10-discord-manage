@@ -6,9 +6,79 @@ ATM10 Discord Manager est un bot Discord développé en **Python** permettant de
 
 ---
 
+# 📌 Table des matières
+
+- [✨ Fonctionnalités](#-fonctionnalit%C3%A9s)
+- [📁 Architecture](#-architecture)
+- [⚙️ Configuration](#-configuration)
+- [🐳 Docker](#-docker)
+- [📡 RCON](#-rcon)
+- [🛠️ Technologies](#-technologies)
+- [🚀 Installation](#-installation)
+- [📅 Roadmap](#-roadmap)
+
+---
+
+# 🚀 Installation
+
+## Prérequis
+
+- Python 3.12+ ou 3.13
+- Docker
+- Docker Compose
+- RCON activé sur votre serveur Minecraft
+- Un token Discord valide
+
+## Installation locale
+
+```bash
+python -m venv venv
+source venv/bin/activate  # ou venv\Scripts\activate sur Windows
+pip install -r requirements.txt
+```
+
+## Configuration
+
+1. Copier ou créer un fichier `.env` à la racine.
+2. Ajouter votre token Discord et les variables nécessaires :
+
+```env
+DISCORD_TOKEN=VotreTokenDiscord
+RCON_HOST=host.docker.internal
+RCON_PORT=25575
+RCON_PASSWORD=VotreMotDePasseRCON
+```
+
+## Démarrage
+
+```bash
+python bot/main.py
+```
+
+## Recommandation Docker Compose
+
+Si vous utilisez Docker Compose, montez le socket Docker :
+
+```yaml
+services:
+  bot:
+    build: .
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+```
+
+---
+
 # ✨ Fonctionnalités
 
-## ✅ v0.6.0
+## ✅ v0.7.0
+
+### ⚙️ Nouvelles fonctionnalités
+
+- Synchronisation du chat Minecraft ↔ Discord via le salon Logs
+- Publication automatique des morts Minecraft dans le salon Logs
+- Les messages Discord du salon Logs sont relayés vers Minecraft avec le pseudo Discord
+- Filtrage pour éviter les boucles de retour entre Discord et Minecraft
 
 ### ⚙️ Configuration
 
@@ -16,7 +86,7 @@ ATM10 Discord Manager est un bot Discord développé en **Python** permettant de
 - Sélection du conteneur Docker
 - Configuration RCON
 - Configuration du salon Dashboard
-- Configuration du salon Logs
+- Configuration du salon Logs (chat Minecraft / Discord)
 - Configuration du salon Notifications
 - Réinitialisation de la configuration
 
@@ -56,6 +126,7 @@ atm10-discord-manager/
 │
 ├── cogs/
 │   ├── dashboard.py
+│   ├── minecraft_bridge.py
 │   ├── ping.py
 │   ├── server.py
 │   ├── setup.py
@@ -74,6 +145,9 @@ atm10-discord-manager/
 │   ├── docker_service.py
 │   ├── minecraft_service.py
 │   └── rcon_service.py
+│
+├── tasks/
+│   └── minecraft_chat_task.py
 │
 ├── utils/
 │
@@ -161,7 +235,7 @@ Le menu permet de configurer :
 - 🐳 Docker
 - 📡 RCON
 - 📊 Dashboard
-- 📜 Logs
+- 📜 Logs (chat Minecraft / Discord)
 - 🔔 Notifications
 
 Toutes les informations sont sauvegardées automatiquement dans le fichier :
@@ -194,6 +268,12 @@ Aucune API Docker n'est exposée sur Internet.
 # 📡 RCON
 
 Le bot utilise **mctools** pour communiquer avec Minecraft.
+
+Le salon Logs sert également de pont de discussion entre Minecraft et Discord :
+
+- les messages du serveur Minecraft sont publiés dans Discord
+- les messages envoyés dans le salon Logs sont relayés vers Minecraft
+- les notifications de mort apparaissent automatiquement dans le salon Logs
 
 Fonctionnalités disponibles :
 

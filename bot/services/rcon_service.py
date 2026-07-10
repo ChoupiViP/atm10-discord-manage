@@ -102,6 +102,9 @@ class RconService:
     def stop(self):
         return self.command("stop")
 
+    def tps(self):
+        return self.command("tps")
+
     def time(self):
         return self.command("time query daytime")
 
