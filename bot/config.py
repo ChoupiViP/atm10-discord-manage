@@ -13,11 +13,6 @@ class Config:
     DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
     AUTHORIZED_ROLE = os.getenv("AUTHORIZED_ROLE", "Admin")
 
-    RCON_HOST = os.getenv("RCON_HOST", "host.docker.internal")
-    RCON_PASSWORD = os.getenv("RCON_PASSWORD")
-    RCON_PORT = int(os.getenv("RCON_PORT", "25575"))
-    RCON_TIMEOUT = int(os.getenv("RCON_TIMEOUT", "5"))
-
     @classmethod
     def get_docker_container(cls) -> str:
         """Return the Docker container configured through env or setup."""
@@ -33,10 +28,6 @@ class Config:
             "DOCKER_CONTAINER manquant - définissez-le via .env ou utilisez /setup"
         )
 
-    @classmethod
-    def is_rcon_enabled(cls) -> bool:
-        """Return whether RCON can be used with the current configuration."""
-        return bool(cls.RCON_HOST and cls.RCON_PASSWORD and cls.RCON_PORT)
 
 
 if not Config.DISCORD_TOKEN:

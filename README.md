@@ -44,10 +44,12 @@ pip install -r requirements.txt
 
 ```env
 DISCORD_TOKEN=VotreTokenDiscord
-RCON_HOST=host.docker.internal
-RCON_PORT=25575
-RCON_PASSWORD=VotreMotDePasseRCON
+DOCKER_CONTAINER=Votre serveur Doker minecraft
+AUTHORIZED_ROLE=role (ex : Admin)
+TZ=votre zone de temps (ex : Europe/Paris)
 ```
+
+La configuration RCON est maintenant gérée via `/setup` dans Discord.
 
 ## Démarrage
 

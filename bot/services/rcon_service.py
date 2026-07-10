@@ -18,22 +18,22 @@ class RconService:
         """Connexion au serveur RCON."""
 
         config = ConfigService.get_rcon()
+        host = config.get("host")
+        port = config.get("port")
+        password = config.get("password")
 
-        if not config:
-            raise ValueError("Configuration RCON introuvable.")
-
-        if not config.get("host"):
+        if not host:
             raise ValueError("Host RCON non configuré.")
 
-        if not config.get("port"):
+        if not port:
             raise ValueError("Port RCON non configuré.")
 
-        if not config.get("password"):
+        if not password:
             raise ValueError("Mot de passe RCON non configuré.")
 
         self.client = RCONClient(
-            config["host"],
-            port=int(config["port"])
+            host,
+            port=int(port)
         )
 
         self.client.login(config["password"])
