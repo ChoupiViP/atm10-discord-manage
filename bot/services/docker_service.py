@@ -128,8 +128,8 @@ class DockerService:
 
     def _get_disk_usage(self, container) -> str:
         try:
-            info = self.client.api.inspect_container(container.id, size=True)
-            size_rootfs = info.get("SizeRootFs")
+            info = self.client.api.inspect_container(container.id)
+            size_rootfs = info.get("SizeRootFs") or info.get("SizeRw")
             if size_rootfs is None:
                 return "N/A"
             return self._format_size(size_rootfs)
