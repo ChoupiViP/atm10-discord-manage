@@ -78,7 +78,11 @@ class MinecraftService:
     def player_info(self, player: str) -> dict[str, str]:
         """Récupère les informations principales d'un joueur Minecraft."""
         online_players = self.online_players()
+        logger.debug(f"Joueurs en ligne: {online_players}")
+        
         online = player in online_players
+        logger.info(f"Joueur {player} connecté: {online}")
+        
         position = self._get_player_data(player, "Pos")
         dimension = self._get_player_data(player, "Dimension")
         playtime = self._get_player_data(player, "Stats.minecraft.custom.minecraft.play_time")
@@ -101,7 +105,10 @@ class MinecraftService:
 
     def online_players(self) -> list[str]:
         response = self.rcon.list_players()
-        return self._parse_online_players(response)
+        logger.debug(f"[RCON] list_players response: {response!r}")
+        players = self._parse_online_players(response)
+        logger.debug(f"[RCON] parsed online players: {players}")
+        return players
 
     def save_all(self):
         return self.rcon.save_all()
@@ -201,34 +208,59 @@ class MinecraftService:
     def _parse_online_players(self, response: str) -> list[str]:
         match = self._PLAYER_LIST_PATTERN.search(response)
         if not match:
+            logger.debug(f"Aucun match pour PLAYER_LIST_PATTERN dans: {response!r}")
             return []
 
         player_list = match.group(1).strip()
         if not player_list:
+            logger.debug("Liste de joueurs vide")
             return []
 
-        return [name.strip() for name in player_list.split(",") if name.strip()]
+        # Nettoyer d'abord les codes ANSI/couleurs
+        player_list = self._ANSI_PATTERN.sub("", player_list)
+        player_list = self._MINECRAFT_COLOR_PATTERN.sub("", player_list)
+        
+        players = [name.strip() for name in player_list.split(",") if name.strip()]
+        logger.debug(f"Parsed players from '{player_list}': {players}")
+        return players
 
     def _get_player_data(self, player: str, path: str) -> str | None:
         try:
             response = self.rcon.command(f"data get entity {player} {path}")
-            return self._parse_data_get_response(response)
-        except Exception:
+            logger.debug(f"[RCON] data get entity {player} {path} => {response!r}")
+            result = self._parse_data_get_response(response)
+            logger.debug(f"[RCON] parsed result: {result!r}")
+            return result
+        except Exception as exc:
+            logger.warning(f"Erreur lors de la récupération de {path} pour {player}: {exc}")
             return None
 
     def _parse_data_get_response(self, response: str) -> str | None:
         if not isinstance(response, str):
+            logger.debug(f"Response non-string: {type(response)}")
             return None
 
-        lines = response.strip().splitlines()
-        if not lines:
+        # Nettoyer d'abord les codes ANSI/couleurs
+        cleaned = self._ANSI_PATTERN.sub("", response)
+        cleaned = self._MINECRAFT_COLOR_PATTERN.sub("", cleaned)
+        cleaned = cleaned.replace("\x00", "").strip()
+
+        if not cleaned:
+            logger.debug(f"Response vide après nettoyage: {response!r}")
             return None
 
-        last_line = self._clean_rcon_value(lines[-1])
-        if ": " in last_line:
-            return last_line.split(": ", 1)[1].strip()
+        logger.debug(f"Cleaned response: {cleaned!r}")
 
-        return last_line.strip()
+        # Chercher le format "key: value"
+        if ": " in cleaned:
+            parts = cleaned.split(": ", 1)
+            value = parts[1].strip()
+            logger.debug(f"Extracted value from key:value format: {value!r}")
+            return value
+
+        # Sinon retourner la ligne entière nettoyée
+        logger.debug(f"No key:value format, returning cleaned: {cleaned!r}")
+        return cleaned
 
     def _clean_rcon_value(self, value: str | None) -> str | None:
         if value is None:
