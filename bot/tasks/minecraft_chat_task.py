@@ -87,7 +87,7 @@ class MinecraftChatTask:
 
                     while "\n" in self._log_buffer:
                         line, self._log_buffer = self._log_buffer.split("\n", 1)
-                        line = line.strip()
+                        line = self._clean_log_line(line).strip()
                         if not line:
                             continue
 
@@ -250,6 +250,11 @@ class MinecraftChatTask:
 
     def _is_discord_bridge_line(self, line: str) -> bool:
         return self._DISCORD_BRIDGE in line
+
+    def _clean_log_line(self, line: str) -> str:
+        line = self._ANSI_PATTERN.sub("", line)
+        line = line.replace("\r", "")
+        return "".join(ch for ch in line if ch == "\t" or ch >= " ")
 
     def _parse_join_line(self, line: str) -> str | None:
         match = self._JOIN_PATTERN.match(line)
