@@ -27,6 +27,8 @@ class MinecraftChatTask:
         re.IGNORECASE,
     )
 
+    _ANSI_PATTERN = re.compile(r"\x1B\[[0-?]*[ -/]*[@-~]")
+
     def __init__(self, bot: discord.Client) -> None:
         self.bot = bot
         self.minecraft = MinecraftService()
@@ -38,6 +40,9 @@ class MinecraftChatTask:
         self._events_channel: discord.TextChannel | None = None
         self._chat_channel_id: int | None = None
         self._chat_channel: discord.TextChannel | None = None
+        self._death_channel_id: int | None = None
+        self._death_channel: discord.TextChannel | None = None
+        self._log_buffer = ""
 
     def start(self) -> None:
         if self.task is None or self.task.done():
@@ -77,8 +82,12 @@ class MinecraftChatTask:
                         continue
 
                     decoded = raw.decode("utf-8", errors="replace")
-                    for part in decoded.splitlines():
-                        line = part.strip()
+                    decoded = self._ANSI_PATTERN.sub("", decoded)
+                    self._log_buffer += decoded
+
+                    while "\n" in self._log_buffer:
+                        line, self._log_buffer = self._log_buffer.split("\n", 1)
+                        line = line.strip()
                         if not line:
                             continue
 
