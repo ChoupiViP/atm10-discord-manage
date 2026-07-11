@@ -2,6 +2,7 @@ import asyncio
 import re
 import threading
 import time
+from datetime import datetime
 
 import discord
 
@@ -28,8 +29,9 @@ class MinecraftChatTask:
     )
     _JOIN_PATTERN = re.compile(r"^\[.*?\] \[.*?\]: (.+?) joined the game$")
     _LEAVE_PATTERN = re.compile(r"^\[.*?\] \[.*?\]: (.+?) left the game$")
+    _ERROR_PATTERN = re.compile(r"\b(error|failed|unable|cannot|exception|traceback)\b", re.IGNORECASE)
     _CRASH_PATTERN = re.compile(
-        r"\b(crash|crashed|exception|stacktrace|fatal|error)\b",
+        r"\b(crash|crashed|stacktrace|fatal|exception in thread|java\.lang\.[A-Za-z0-9_]+Error|OutOfMemoryError)\b",
         re.IGNORECASE,
     )
 
@@ -48,6 +50,9 @@ class MinecraftChatTask:
         self._chat_channel: discord.TextChannel | None = None
         self._death_channel_id: int | None = None
         self._death_channel: discord.TextChannel | None = None
+        self._notifications_channel_id: int | None = None
+        self._notifications_channel: discord.TextChannel | None = None
+        self._restart_pending = False
         self._log_buffer = ""
 
     def start(self) -> None:
@@ -119,6 +124,28 @@ class MinecraftChatTask:
         chat_channel = await self._get_chat_channel()
         death_channel = await self._get_death_channel()
         events_channel = await self._get_logs_channel()
+        notifications_channel = await self._get_notifications_channel()
+
+        if self._is_crash_line(line):
+            target = notifications_channel or events_channel
+            if target is not None:
+                cause = self._extract_crash_cause(line)
+                description = f"{line}\n\nCause probable : {cause}" if cause else line
+                embed = discord.Embed(
+                    title="🚨 Crash Minecraft",
+                    description=description,
+                    color=discord.Color.dark_red(),
+                )
+                await target.send(
+                    embed=embed,
+                    allowed_mentions=discord.AllowedMentions.none(),
+                )
+                await self._schedule_restart(target)
+            return
+
+        if self._is_error_line(line):
+            await self._send_error_notice(line, notifications_channel or events_channel)
+            return
 
         chat_match = self._CHAT_PATTERN.match(line)
         if chat_match:
@@ -169,9 +196,10 @@ class MinecraftChatTask:
 
         join_player = self._parse_join_line(line)
         if join_player and events_channel is not None:
+            timestamp = datetime.now().strftime("%H:%M:%S")
             embed = discord.Embed(
                 title="✅ Connexion Minecraft",
-                description=f"{join_player} est connecté.",
+                description=f"{join_player} est connecté à {timestamp}.",
                 color=discord.Color.green(),
             )
             await events_channel.send(
@@ -182,22 +210,11 @@ class MinecraftChatTask:
 
         leave_player = self._parse_leave_line(line)
         if leave_player and events_channel is not None:
+            timestamp = datetime.now().strftime("%H:%M:%S")
             embed = discord.Embed(
                 title="❌ Déconnexion Minecraft",
-                description=f"{leave_player} s'est déconnecté.",
+                description=f"{leave_player} s'est déconnecté à {timestamp}.",
                 color=discord.Color.orange(),
-            )
-            await events_channel.send(
-                embed=embed,
-                allowed_mentions=discord.AllowedMentions.none(),
-            )
-            return
-
-        if self._is_crash_line(line) and events_channel is not None:
-            embed = discord.Embed(
-                title="🚨 Crash Minecraft",
-                description=line,
-                color=discord.Color.dark_red(),
             )
             await events_channel.send(
                 embed=embed,
@@ -242,97 +259,47 @@ class MinecraftChatTask:
 
         return True
 
-        chat_match = self._CHAT_PATTERN.match(line)
-        if chat_match:
-            author = chat_match.group(1)
-            message = chat_match.group(2)
+    def _extract_crash_cause(self, line: str) -> str | None:
+        match = re.search(r"(java\.lang\.[A-Za-z0-9_]+Error|OutOfMemoryError|[A-Za-z0-9_]*Exception)", line)
+        return match.group(1) if match else None
 
-            if await self._handle_link_code(author, message):
-                return
-
-            if chat_channel is not None:
-                target = chat_channel
-            elif events_channel is not None:
-                target = events_channel
-            else:
-                return
-
-            discord_name = LinkService.get_discord_id(author)
-            if discord_name is not None:
-                discord_user = self.bot.get_user(discord_name)
-                discord_handle = f" ({discord_user.display_name})" if discord_user else ""
-            else:
-                discord_handle = ""
-
-            await target.send(
-                f"**{author}{discord_handle}** : {message}",
-                allowed_mentions=discord.AllowedMentions.none(),
-            )
+    async def _send_error_notice(self, line: str, channel: discord.TextChannel | None) -> None:
+        if channel is None:
             return
 
-        death_message = self._parse_death_line(line)
-        if death_message:
-            if death_channel is not None:
-                target = death_channel
-            elif events_channel is not None:
-                target = events_channel
-            else:
-                return
+        embed = discord.Embed(
+            title="⚠ Nouvelle erreur détectée",
+            description="Voir détails",
+            color=discord.Color.dark_orange(),
+        )
+        embed.add_field(name="Détail", value=line[:1024], inline=False)
+        await channel.send(embed=embed, allowed_mentions=discord.AllowedMentions.none())
 
-            embed = discord.Embed(
-                title="💀 Mort Minecraft",
-                description=death_message,
-                color=discord.Color.red(),
-            )
-            await target.send(
-                embed=embed,
-                allowed_mentions=discord.AllowedMentions.none(),
-            )
+    async def _schedule_restart(self, channel: discord.TextChannel) -> None:
+        if getattr(self, "_restart_pending", False):
             return
 
-        join_player = self._parse_join_line(line)
-        if join_player and events_channel is not None:
-            embed = discord.Embed(
-                title="✅ Connexion Minecraft",
-                description=f"{join_player} est connecté.",
-                color=discord.Color.green(),
-            )
-            await events_channel.send(
-                embed=embed,
-                allowed_mentions=discord.AllowedMentions.none(),
-            )
-            return
+        self._restart_pending = True
+        await channel.send(
+            "Le serveur redémarre dans 30 secondes.",
+            allowed_mentions=discord.AllowedMentions.none(),
+        )
 
-        leave_player = self._parse_leave_line(line)
-        if leave_player and events_channel is not None:
-            embed = discord.Embed(
-                title="❌ Déconnexion Minecraft",
-                description=f"{leave_player} s'est déconnecté.",
-                color=discord.Color.orange(),
-            )
-            await events_channel.send(
-                embed=embed,
-                allowed_mentions=discord.AllowedMentions.none(),
-            )
-            return
+        await asyncio.sleep(30)
 
-        if self._is_crash_line(line) and events_channel is not None:
-            embed = discord.Embed(
-                title="🚨 Crash Minecraft",
-                description=line,
-                color=discord.Color.dark_red(),
-            )
-            await events_channel.send(
-                embed=embed,
+        try:
+            await asyncio.to_thread(self.docker.restart_container)
+            await channel.send(
+                "✅ Le serveur a redémarré.",
                 allowed_mentions=discord.AllowedMentions.none(),
             )
-            return
-
-        if events_channel is not None:
-            await events_channel.send(
-                f"`{line}`",
+        except Exception as exc:
+            await channel.send(
+                f"❌ Échec du redémarrage : {exc}",
                 allowed_mentions=discord.AllowedMentions.none(),
             )
+        finally:
+            self._restart_pending = False
 
     async def _get_logs_channel(self) -> discord.TextChannel | None:
         channel_id = ConfigService.get_logs_channel()
@@ -421,8 +388,40 @@ class MinecraftChatTask:
         self._death_channel = None
         return None
 
+    async def _get_notifications_channel(self) -> discord.TextChannel | None:
+        channel_id = ConfigService.get_notifications_channel()
+        if channel_id is None:
+            self._notifications_channel_id = None
+            self._notifications_channel = None
+            return None
+
+        if self._notifications_channel_id == channel_id and self._notifications_channel is not None:
+            return self._notifications_channel
+
+        self._notifications_channel_id = channel_id
+        channel = self.bot.get_channel(channel_id)
+        if channel is not None and isinstance(channel, discord.TextChannel):
+            self._notifications_channel = channel
+            return channel
+
+        try:
+            fetched = await self.bot.fetch_channel(channel_id)
+        except discord.NotFound:
+            self._notifications_channel = None
+            return None
+
+        if isinstance(fetched, discord.TextChannel):
+            self._notifications_channel = fetched
+            return fetched
+
+        self._notifications_channel = None
+        return None
+
     def _is_discord_bridge_line(self, line: str) -> bool:
         return self._DISCORD_BRIDGE in line
+
+    def _is_error_line(self, line: str) -> bool:
+        return bool(self._ERROR_PATTERN.search(line))
 
     def _is_rcon_line(self, line: str) -> bool:
         return bool(self._RCON_PATTERN.search(line))
