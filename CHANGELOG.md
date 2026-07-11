@@ -6,6 +6,28 @@ Le format suit les recommandations de Keep a Changelog.
 
 ---
 
+## [0.8.0] - 2026-07-11
+
+### Ajouté
+
+- Canaux Discord dédiés pour le chat Minecraft, les logs et les morts.
+- Détection des messages de chat Minecraft dans les logs Docker.
+- Notifications de mort Minecraft envoyées dans un canal dédié.
+- Suppression des logs RCON listener/client inutiles.
+- Nettoyage des préfixes `>....` avant traitement.
+
+### Modifié
+
+- Amélioration des expressions régulières de chat et de mort pour supporter les logs Minecraft à trois blocs `[...]`.
+- Mise à jour du README pour documenter les canaux dédiés et la configuration `/setup`.
+
+### Corrigé
+
+- Résolution des cas où les morts Minecraft n’étaient pas publiées dans le salon configuré.
+- Réduction du bruit de log RCON dans Discord.
+
+---
+
 ## [0.7.0] - 2026-07-11
 
 ### Ajouté

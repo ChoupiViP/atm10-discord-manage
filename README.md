@@ -73,14 +73,15 @@ services:
 
 # ✨ Fonctionnalités
 
-## ✅ v0.7.0
+## ✅ v0.8.0
 
 ### ⚙️ Nouvelles fonctionnalités
 
-- Synchronisation du chat Minecraft ↔ Discord via le salon Logs
-- Publication automatique des morts Minecraft dans le salon Logs
-- Les messages Discord du salon Logs sont relayés vers Minecraft avec le pseudo Discord
-- Filtrage pour éviter les boucles de retour entre Discord et Minecraft
+- Gestion dédiée du chat Minecraft vers Discord via un salon Discord spécifique
+- Publication des morts Minecraft dans un canal Discord configuré
+- Détection des messages de chat Minecraft dans les logs Docker
+- Suppression du bruit lié aux logs RCON Listener / RCON Client
+- Nettoyage des préfixes `>....` avant analyse des logs
 
 ### ⚙️ Configuration
 
@@ -88,7 +89,9 @@ services:
 - Sélection du conteneur Docker
 - Configuration RCON
 - Configuration du salon Dashboard
-- Configuration du salon Logs (chat Minecraft / Discord)
+- Configuration du salon Logs pour les événements et erreurs
+- Configuration du salon Chat Minecraft dédié
+- Configuration du salon Mort Minecraft dédié
 - Configuration du salon Notifications
 - Réinitialisation de la configuration
 
@@ -271,17 +274,17 @@ Aucune API Docker n'est exposée sur Internet.
 
 Le bot utilise **mctools** pour communiquer avec Minecraft.
 
-Le salon Logs sert également de pont de discussion entre Minecraft et Discord :
+La configuration via `/setup` permet de définir plusieurs canaux :
 
-- les messages du serveur Minecraft sont publiés dans Discord
-- les messages envoyés dans le salon Logs sont relayés vers Minecraft
-- les notifications de mort apparaissent automatiquement dans le salon Logs
+- un salon Chat Discord dédié pour le chat Minecraft
+- un salon Morts dédié aux notifications de décès
+- un salon Logs pour les événements et les messages système
 
 Fonctionnalités disponibles :
 
 - Exécution de commandes
 - Chat Minecraft
-- Sauvegardes
+- Notifications de morts
 - Liste des joueurs
 - Arrêt propre du serveur
 
@@ -370,7 +373,7 @@ Dashboard Discord interactif :
 
 ---
 
-## 🚧 v0.8.0
+## ✅ v0.8.0
 
 Événements Minecraft :
 
@@ -435,9 +438,9 @@ Le bot permettra notamment :
 
 Version actuelle :
 
-## **v0.6.0**
+## **v0.8.0**
 
-Le projet possède désormais une architecture complète basée sur les services, avec une configuration entièrement réalisable depuis Discord.
+Le projet propose désormais une capture étendue du chat Minecraft, des notifications de morts et une gestion dédiée des canaux Discord via `/setup`.
 
 ---
 
