@@ -78,21 +78,24 @@ class MinecraftService:
     def player_info(self, player: str) -> dict[str, str]:
         """Récupère les informations principales d'un joueur Minecraft."""
         online_players = self.online_players()
-        logger.info(f"Vérification du joueur '{player}' dans la liste: {online_players}")
+        logger.info(f"[PLAYER_INFO] Vérification du joueur '{player}' (bytes: {[ord(c) for c in player]}) dans la liste: {online_players!r}")
         
         # Vérifier le joueur avec case-insensitive si pas de match exact
         online = player in online_players
+        logger.info(f"[PLAYER_INFO] Match exact: {online}")
+        
         if not online:
             # Chercher avec correspondance case-insensitive
             online = any(p.lower() == player.lower() for p in online_players)
             if online:
-                logger.info(f"Match trouvé avec case-insensitive pour {player}")
+                logger.info(f"[PLAYER_INFO] Match trouvé avec case-insensitive pour {player}")
         
-        logger.info(f"Joueur {player} connecté: {online}")
+        logger.info(f"[PLAYER_INFO] Résultat final - Joueur {player} connecté: {online}")
         
         position = self._get_player_data(player, "Pos")
         dimension = self._get_player_data(player, "Dimension")
-        playtime = self._get_player_data(player, "Stats.minecraft.custom.minecraft.play_time")
+        # Utiliser ticksLived au lieu de Stats qui peut être très volumineux (risque d'erreur RCON packet size)
+        playtime = self._get_player_data(player, "ticksLived")
         ping = self._get_player_data(player, "Ping")
 
         if playtime is not None:
@@ -223,12 +226,20 @@ class MinecraftService:
             logger.debug("Liste de joueurs vide")
             return []
 
+        logger.info(f"[LIST] Raw player_list extrait: {player_list!r}")
+
         # Nettoyer d'abord les codes ANSI/couleurs
         player_list = self._ANSI_PATTERN.sub("", player_list)
         player_list = self._MINECRAFT_COLOR_PATTERN.sub("", player_list)
+        logger.info(f"[LIST] Après nettoyage ANSI/couleurs: {player_list!r}")
         
         players = [name.strip() for name in player_list.split(",") if name.strip()]
-        logger.info(f"Joueurs en ligne détectés: {players}")
+        logger.info(f"[LIST] Joueurs en ligne détectés: {players!r}")
+        
+        # Debug: afficher les bytes pour chaque joueur
+        for p in players:
+            logger.debug(f"[LIST] Joueur '{p}' ({[ord(c) for c in p[:20]]}...)")
+        
         return players
 
     def _get_player_data(self, player: str, path: str) -> str | None:
@@ -239,7 +250,12 @@ class MinecraftService:
             # Si la commande retourne "Found no elements", c'est une erreur, pas une réponse valide
             if isinstance(response, str) and "Found no elements" in response:
                 logger.debug(f"Chemin NBT non trouvé pour {path}")
-                return response  # Retourner tel quel pour que le parsing le reconnaisse comme erreur
+                return response
+            
+            # Détecter l'erreur de taille de paquet RCON
+            if isinstance(response, str) and "invalid packet size" in response.lower():
+                logger.warning(f"Erreur RCON packet size pour {path} du joueur {player}: {response}")
+                return None
             
             result = self._parse_data_get_response(response)
             logger.debug(f"[RCON] parsed result: {result!r}")
@@ -294,7 +310,7 @@ class MinecraftService:
             try:
                 coords = value[1:-1].split(',')
                 coords = [float(c.strip().rstrip('d')) for c in coords]
-                value = f"({coords[0]:.2f}, {coords[1]:.0f}, {coords[2]:.2f}"
+                value = f"({coords[0]:.2f}, {coords[1]:.0f}, {coords[2]:.2f})"
             except Exception:
                 pass  # Garder la valeur originale si parse échoue
         
