@@ -21,7 +21,7 @@ class MinecraftChatTask:
     )
     _DISCORD_BRIDGE = "[Discord]"
     _RCON_PATTERN = re.compile(
-        r"^(?:\[(?:RCON Listener|RCON Client).*|>\s*[\.\-\s]*$|Thread RCON Client .*shutting down$)",
+        r"\[RCON Listener #1/INFO\]|\[RCON Client /172\.28\.0\.1|Thread RCON Client .*shutting down",
         re.IGNORECASE,
     )
     _JOIN_PATTERN = re.compile(r"^\[.*?\] \[.*?\]: (.+?) joined the game$")
