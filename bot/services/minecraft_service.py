@@ -75,7 +75,8 @@ class MinecraftService:
 
     def player_info(self, player: str) -> dict[str, str]:
         """Récupère les informations principales d'un joueur Minecraft."""
-        online = self._is_player_online(player)
+        online_players = self.online_players()
+        online = player in online_players
         position = self._get_player_data(player, "Pos")
         dimension = self._get_player_data(player, "Dimension")
         playtime = self._get_player_data(player, "Stats.minecraft.custom.minecraft.play_time")
@@ -95,6 +96,10 @@ class MinecraftService:
 
     def say(self, message: str):
         return self.rcon.say(message)
+
+    def online_players(self) -> list[str]:
+        response = self.rcon.list_players()
+        return self._parse_online_players(response)
 
     def save_all(self):
         return self.rcon.save_all()
@@ -190,3 +195,58 @@ class MinecraftService:
 
         values = self._TPS_SINGLE_PATTERN.findall(response)
         return f"{values[0]} TPS" if values else "N/A"
+
+    def _parse_online_players(self, response: str) -> list[str]:
+        match = self._PLAYER_LIST_PATTERN.search(response)
+        if not match:
+            return []
+
+        player_list = match.group(1).strip()
+        if not player_list:
+            return []
+
+        return [name.strip() for name in player_list.split(",") if name.strip()]
+
+    def _get_player_data(self, player: str, path: str) -> str | None:
+        try:
+            response = self.rcon.command(f"data get entity {player} {path}")
+            return self._parse_data_get_response(response)
+        except Exception:
+            return None
+
+    def _parse_data_get_response(self, response: str) -> str | None:
+        if not isinstance(response, str):
+            return None
+
+        lines = response.strip().splitlines()
+        if not lines:
+            return None
+
+        last_line = lines[-1]
+        if ": " in last_line:
+            return last_line.split(": ", 1)[1].strip()
+
+        return last_line.strip()
+
+    def _format_playtime(self, value: str) -> str:
+        try:
+            ticks = int(re.search(r"-?\d+", value).group(0))
+        except Exception:
+            return "N/A"
+
+        seconds = ticks // 20
+        days, remainder = divmod(seconds, 86400)
+        hours, remainder = divmod(remainder, 3600)
+        minutes, seconds = divmod(remainder, 60)
+
+        parts = []
+        if days:
+            parts.append(f"{days}j")
+        if hours:
+            parts.append(f"{hours}h")
+        if minutes:
+            parts.append(f"{minutes}m")
+        if seconds or not parts:
+            parts.append(f"{seconds}s")
+
+        return " ".join(parts)

@@ -107,6 +107,20 @@ class Minecraft(commands.Cog):
             ephemeral=True,
         )
 
+    @player.autocomplete('player')
+    async def player_autocomplete(
+        self,
+        interaction: discord.Interaction,
+        current: str,
+    ) -> list[app_commands.Choice[str]]:
+        try:
+            online_players = await asyncio.to_thread(self.minecraft.online_players)
+        except Exception:
+            return []
+
+        matches = [player for player in online_players if current.lower() in player.lower()]
+        return [app_commands.Choice(name=player, value=player) for player in matches[:25]]
+
     @minecraft_group.command(
         name="save",
         description="Forcer une sauvegarde du monde Minecraft.",
