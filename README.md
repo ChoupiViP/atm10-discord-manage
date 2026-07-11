@@ -73,15 +73,15 @@ services:
 
 # ✨ Fonctionnalités
 
-## ✅ v0.8.0
+## ✅ v0.9.0
 
 ### ⚙️ Nouvelles fonctionnalités
 
-- Gestion dédiée du chat Minecraft vers Discord via un salon Discord spécifique
-- Publication des morts Minecraft dans un canal Discord configuré
-- Détection des messages de chat Minecraft dans les logs Docker
-- Suppression du bruit lié aux logs RCON Listener / RCON Client
-- Nettoyage des préfixes `>....` avant analyse des logs
+- Liaison Discord ↔ pseudo Minecraft via `/link`
+- Validation du lien avec un code envoyé depuis le chat Minecraft
+- Affichage du pseudo Discord associé dans les messages Minecraft affichés sur Discord
+- Chat Discord → Minecraft stylé via `tellraw`, sans le préfixe `[Rcon]`
+- Support de `/unlink` et `/myprofile` pour gérer les liaisons
 
 ### ⚙️ Configuration
 
@@ -385,14 +385,14 @@ Dashboard Discord interactif :
 
 ---
 
-## 🚧 v0.9.0
+## ✅ v0.9.0
 
-Sauvegardes :
+Link Discord ↔ Minecraft :
 
-- Sauvegardes automatiques
-- Sauvegardes manuelles
-- Rotation
-- Compression
+- Lien par code d’authentification Minecraft
+- Chat Discord → Minecraft stylé avec `tellraw`
+- Affichage des identités liées dans les messages Minecraft
+- Gestion `/link`, `/unlink`, `/myprofile`
 
 ---
 
@@ -446,9 +446,9 @@ Le projet propose désormais une capture étendue du chat Minecraft, des notific
 
 # 👨‍💻 Auteur
 
-**Johann Glotin**
+**ChoupiViP**
 
-Projet personnel développé autour d'un serveur privé **All the Mods 10: To the Sky**.
+Projet personnel développé autour d'un serveur privé **All the Mods 10**.
 
 ---
 
