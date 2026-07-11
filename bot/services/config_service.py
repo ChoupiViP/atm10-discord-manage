@@ -33,6 +33,12 @@ class ConfigService:
         "death": {
             "channel_id": None
         },
+        "connections": {
+            "channel_id": None
+        },
+        "crash": {
+            "channel_id": None
+        },
         "notifications": {
             "channel_id": None
         },
@@ -243,6 +249,42 @@ class ConfigService:
     def get_death_channel(cls):
 
         return cls.load()["death"]["channel_id"]
+
+    # --------------------------------------------------
+    # Connections
+    # --------------------------------------------------
+
+    @classmethod
+    def set_connections_channel(cls, channel_id: int):
+
+        config = cls.load()
+
+        config["connections"]["channel_id"] = channel_id
+
+        cls.save(config)
+
+    @classmethod
+    def get_connections_channel(cls):
+
+        return cls.load()["connections"]["channel_id"]
+
+    # --------------------------------------------------
+    # Crash
+    # --------------------------------------------------
+
+    @classmethod
+    def set_crash_channel(cls, channel_id: int):
+
+        config = cls.load()
+
+        config["crash"]["channel_id"] = channel_id
+
+        cls.save(config)
+
+    @classmethod
+    def get_crash_channel(cls):
+
+        return cls.load()["crash"]["channel_id"]
 
     # --------------------------------------------------
     # Notifications

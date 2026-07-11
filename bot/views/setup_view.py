@@ -162,8 +162,7 @@ class SetupView(discord.ui.View):
         embed = discord.Embed(
             title="📜 Configuration des Logs Minecraft",
             description=(
-                "Sélectionnez le salon qui recevra les connexions, déconnexions, "
-                "crashs et les logs Minecraft."
+                "Sélectionnez le salon qui recevra les logs Minecraft et les messages système."
             ),
             color=discord.Color.orange()
         )
@@ -171,6 +170,60 @@ class SetupView(discord.ui.View):
         await interaction.response.send_message(
             embed=embed,
             view=ChannelSelectView("logs"),
+            ephemeral=True
+        )
+
+    @discord.ui.button(
+        label="Connexions",
+        emoji="🔌",
+        style=discord.ButtonStyle.secondary,
+        row=1,
+        custom_id="setup_connections"
+    )
+    async def connections(
+        self,
+        interaction: discord.Interaction,
+        button: discord.ui.Button
+    ):
+
+        embed = discord.Embed(
+            title="🔌 Configuration des Connexions Minecraft",
+            description=(
+                "Sélectionnez le salon qui recevra les messages de connexion et déconnexion Minecraft."
+            ),
+            color=discord.Color.green()
+        )
+
+        await interaction.response.send_message(
+            embed=embed,
+            view=ChannelSelectView("connections"),
+            ephemeral=True
+        )
+
+    @discord.ui.button(
+        label="Crashs",
+        emoji="💥",
+        style=discord.ButtonStyle.secondary,
+        row=1,
+        custom_id="setup_crash"
+    )
+    async def crash(
+        self,
+        interaction: discord.Interaction,
+        button: discord.ui.Button
+    ):
+
+        embed = discord.Embed(
+            title="💥 Configuration des Crashs Minecraft",
+            description=(
+                "Sélectionnez le salon qui recevra les messages de crash Minecraft."
+            ),
+            color=discord.Color.red()
+        )
+
+        await interaction.response.send_message(
+            embed=embed,
+            view=ChannelSelectView("crash"),
             ephemeral=True
         )
 

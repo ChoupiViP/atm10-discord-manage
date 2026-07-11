@@ -50,6 +50,10 @@ class MinecraftChatTask:
         self._chat_channel: discord.TextChannel | None = None
         self._death_channel_id: int | None = None
         self._death_channel: discord.TextChannel | None = None
+        self._connections_channel_id: int | None = None
+        self._connections_channel: discord.TextChannel | None = None
+        self._crash_channel_id: int | None = None
+        self._crash_channel: discord.TextChannel | None = None
         self._notifications_channel_id: int | None = None
         self._notifications_channel: discord.TextChannel | None = None
         self._restart_pending = False
@@ -123,11 +127,13 @@ class MinecraftChatTask:
 
         chat_channel = await self._get_chat_channel()
         death_channel = await self._get_death_channel()
+        connections_channel = await self._get_connections_channel()
+        crash_channel = await self._get_crash_channel()
         events_channel = await self._get_logs_channel()
         notifications_channel = await self._get_notifications_channel()
 
         if self._is_crash_line(line):
-            target = notifications_channel or events_channel
+            target = crash_channel or notifications_channel or events_channel
             if target is not None:
                 cause = self._extract_crash_cause(line)
                 description = f"{line}\n\nCause probable : {cause}" if cause else line
@@ -195,32 +201,36 @@ class MinecraftChatTask:
             return
 
         join_player = self._parse_join_line(line)
-        if join_player and events_channel is not None:
-            timestamp = datetime.now().strftime("%H:%M:%S")
-            embed = discord.Embed(
-                title="✅ Connexion Minecraft",
-                description=f"{join_player} est connecté à {timestamp}.",
-                color=discord.Color.green(),
-            )
-            await events_channel.send(
-                embed=embed,
-                allowed_mentions=discord.AllowedMentions.none(),
-            )
-            return
+        if join_player:
+            target = connections_channel or events_channel
+            if target is not None:
+                timestamp = datetime.now().strftime("%H:%M:%S")
+                embed = discord.Embed(
+                    title="✅ Connexion Minecraft",
+                    description=f"{join_player} est connecté à {timestamp}.",
+                    color=discord.Color.green(),
+                )
+                await target.send(
+                    embed=embed,
+                    allowed_mentions=discord.AllowedMentions.none(),
+                )
+                return
 
         leave_player = self._parse_leave_line(line)
-        if leave_player and events_channel is not None:
-            timestamp = datetime.now().strftime("%H:%M:%S")
-            embed = discord.Embed(
-                title="❌ Déconnexion Minecraft",
-                description=f"{leave_player} s'est déconnecté à {timestamp}.",
-                color=discord.Color.orange(),
-            )
-            await events_channel.send(
-                embed=embed,
-                allowed_mentions=discord.AllowedMentions.none(),
-            )
-            return
+        if leave_player:
+            target = connections_channel or events_channel
+            if target is not None:
+                timestamp = datetime.now().strftime("%H:%M:%S")
+                embed = discord.Embed(
+                    title="❌ Déconnexion Minecraft",
+                    description=f"{leave_player} s'est déconnecté à {timestamp}.",
+                    color=discord.Color.orange(),
+                )
+                await target.send(
+                    embed=embed,
+                    allowed_mentions=discord.AllowedMentions.none(),
+                )
+                return
 
         if events_channel is not None:
             await events_channel.send(
@@ -415,6 +425,64 @@ class MinecraftChatTask:
             return fetched
 
         self._notifications_channel = None
+        return None
+
+    async def _get_connections_channel(self) -> discord.TextChannel | None:
+        channel_id = ConfigService.get_connections_channel()
+        if channel_id is None:
+            self._connections_channel_id = None
+            self._connections_channel = None
+            return None
+
+        if self._connections_channel_id == channel_id and self._connections_channel is not None:
+            return self._connections_channel
+
+        self._connections_channel_id = channel_id
+        channel = self.bot.get_channel(channel_id)
+        if channel is not None and isinstance(channel, discord.TextChannel):
+            self._connections_channel = channel
+            return channel
+
+        try:
+            fetched = await self.bot.fetch_channel(channel_id)
+        except discord.NotFound:
+            self._connections_channel = None
+            return None
+
+        if isinstance(fetched, discord.TextChannel):
+            self._connections_channel = fetched
+            return fetched
+
+        self._connections_channel = None
+        return None
+
+    async def _get_crash_channel(self) -> discord.TextChannel | None:
+        channel_id = ConfigService.get_crash_channel()
+        if channel_id is None:
+            self._crash_channel_id = None
+            self._crash_channel = None
+            return None
+
+        if self._crash_channel_id == channel_id and self._crash_channel is not None:
+            return self._crash_channel
+
+        self._crash_channel_id = channel_id
+        channel = self.bot.get_channel(channel_id)
+        if channel is not None and isinstance(channel, discord.TextChannel):
+            self._crash_channel = channel
+            return channel
+
+        try:
+            fetched = await self.bot.fetch_channel(channel_id)
+        except discord.NotFound:
+            self._crash_channel = None
+            return None
+
+        if isinstance(fetched, discord.TextChannel):
+            self._crash_channel = fetched
+            return fetched
+
+        self._crash_channel = None
         return None
 
     def _is_discord_bridge_line(self, line: str) -> bool:

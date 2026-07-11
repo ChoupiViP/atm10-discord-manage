@@ -35,6 +35,12 @@ class ChannelSelect(discord.ui.ChannelSelect):
         elif self.config_key == "death":
             ConfigService.set_death_channel(channel.id)
 
+        elif self.config_key == "connections":
+            ConfigService.set_connections_channel(channel.id)
+
+        elif self.config_key == "crash":
+            ConfigService.set_crash_channel(channel.id)
+
         elif self.config_key == "notifications":
             ConfigService.set_notifications_channel(channel.id)
 
