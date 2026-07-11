@@ -23,6 +23,8 @@ class MinecraftService:
     )
     _PLAYER_LIST_PATTERN = re.compile(r"There are \d+ of a maximum of \d+ players(?: online:)?\s*(.*)$", re.IGNORECASE)
     _PLAYER_NAME_PATTERN = re.compile(r"\b{player}\b")
+    _ANSI_PATTERN = re.compile(r"\x1B\[[0-?]*[ -/]*[@-~]")
+    _MINECRAFT_COLOR_PATTERN = re.compile(r"§[0-9A-FK-ORa-fk-or]")
     _TPS_MULTI_PATTERN = re.compile(
         r"(?:from last.*?:|last.*?:)\s*(\d+(?:\.\d+)?),\s*(\d+(?:\.\d+)?),\s*(\d+(?:\.\d+)?)",
         re.IGNORECASE,
@@ -89,8 +91,8 @@ class MinecraftService:
             "player": player,
             "online": "Oui" if online else "Non",
             "playtime": playtime or "N/A",
-            "position": position or "N/A",
-            "dimension": dimension or "N/A",
+            "position": self._clean_rcon_value(position) or "N/A",
+            "dimension": self._clean_rcon_value(dimension) or "N/A",
             "ping": f"{ping} ms" if ping is not None else "N/A",
         }
 
@@ -222,11 +224,21 @@ class MinecraftService:
         if not lines:
             return None
 
-        last_line = lines[-1]
+        last_line = self._clean_rcon_value(lines[-1])
         if ": " in last_line:
             return last_line.split(": ", 1)[1].strip()
 
         return last_line.strip()
+
+    def _clean_rcon_value(self, value: str | None) -> str | None:
+        if value is None:
+            return None
+
+        value = self._ANSI_PATTERN.sub("", value)
+        value = self._MINECRAFT_COLOR_PATTERN.sub("", value)
+        value = value.replace("\x00", "")
+        value = value.strip()
+        return value or None
 
     def _format_playtime(self, value: str) -> str:
         try:
