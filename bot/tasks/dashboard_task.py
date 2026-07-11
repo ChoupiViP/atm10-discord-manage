@@ -83,3 +83,27 @@ class DashboardTask:
             return channel
 
         return await self.bot.fetch_channel(channel_id)
+
+    async def _update_presence(self, info: dict[str, any]) -> None:
+        server_online = info.get("success") and info.get("status") == "running"
+        players = info.get("players", 0)
+        max_players = info.get("max_players", 0)
+
+        if server_online:
+            activity = discord.Activity(
+                type=discord.ActivityType.watching,
+                name=f"{players}/{max_players} joueurs"
+            )
+            await self.bot.change_presence(
+                status=discord.Status.online,
+                activity=activity,
+            )
+        else:
+            activity = discord.Activity(
+                type=discord.ActivityType.watching,
+                name="Serveur hors ligne"
+            )
+            await self.bot.change_presence(
+                status=discord.Status.dnd,
+                activity=activity,
+            )
