@@ -290,7 +290,7 @@ class MinecraftChatTask:
         return self._DISCORD_BRIDGE in line
 
     def _is_rcon_line(self, line: str) -> bool:
-        return bool(self._RCON_PATTERN.match(line))
+        return bool(self._RCON_PATTERN.search(line))
 
     def _clean_log_line(self, line: str) -> str:
         line = self._ANSI_PATTERN.sub("", line)
