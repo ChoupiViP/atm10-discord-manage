@@ -8,7 +8,7 @@ from bot.services.minecraft_service import MinecraftService
 
 
 class MinecraftBridge(commands.Cog):
-    """Forward Discord messages from the logs channel into Minecraft chat."""
+    """Forward Discord messages from the chat channel into Minecraft chat."""
 
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
@@ -19,7 +19,7 @@ class MinecraftBridge(commands.Cog):
         if message.author.bot:
             return
 
-        channel_id = ConfigService.get_logs_channel()
+        channel_id = ConfigService.get_chat_channel()
         if not channel_id or message.channel.id != channel_id:
             return
 
@@ -35,7 +35,10 @@ class MinecraftBridge(commands.Cog):
         if len(payload) > 250:
             payload = payload[:247] + "..."
 
-        await asyncio.to_thread(self.minecraft.say, payload)
+        try:
+            await asyncio.to_thread(self.minecraft.say, payload)
+        except Exception as exc:
+            logger.warning("Impossible d'envoyer le message Minecraft via RCON : %s", exc)
 
 
 async def setup(bot: commands.Bot) -> None:

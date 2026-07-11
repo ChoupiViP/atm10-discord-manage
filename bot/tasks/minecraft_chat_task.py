@@ -20,6 +20,10 @@ class MinecraftChatTask:
         re.IGNORECASE,
     )
     _DISCORD_BRIDGE = "[Discord]"
+    _RCON_PATTERN = re.compile(
+        r"^(?:\[RCON Listener|\[RCON Client|>).*|Thread RCON Client .*shutting down$",
+        re.IGNORECASE,
+    )
     _JOIN_PATTERN = re.compile(r"^\[.*?\] \[.*?\]: (.+?) joined the game$")
     _LEAVE_PATTERN = re.compile(r"^\[.*?\] \[.*?\]: (.+?) left the game$")
     _CRASH_PATTERN = re.compile(
@@ -103,7 +107,11 @@ class MinecraftChatTask:
                 time.sleep(5)
 
     async def _handle_log_line(self, line: str) -> None:
-        if self._is_discord_bridge_line(line):
+        line = self._clean_log_line(line).strip()
+        if not line:
+            return
+
+        if self._is_discord_bridge_line(line) or self._is_rcon_line(line):
             return
 
         chat_channel = await self._get_chat_channel()
@@ -115,7 +123,10 @@ class MinecraftChatTask:
             target = chat_channel or events_channel
             author = chat_match.group(1)
             message = chat_match.group(2)
-            await target.send(f"**{author}** : {message}")
+            await target.send(
+                f"**{author}** : {message}",
+                allowed_mentions=discord.AllowedMentions.none(),
+            )
             return
 
         death_message = self._parse_death_line(line)
@@ -126,7 +137,10 @@ class MinecraftChatTask:
                 description=death_message,
                 color=discord.Color.red(),
             )
-            await target.send(embed=embed)
+            await target.send(
+                embed=embed,
+                allowed_mentions=discord.AllowedMentions.none(),
+            )
             return
 
         join_player = self._parse_join_line(line)
@@ -136,7 +150,10 @@ class MinecraftChatTask:
                 description=f"{join_player} est connecté.",
                 color=discord.Color.green(),
             )
-            await events_channel.send(embed=embed)
+            await events_channel.send(
+                embed=embed,
+                allowed_mentions=discord.AllowedMentions.none(),
+            )
             return
 
         leave_player = self._parse_leave_line(line)
@@ -146,7 +163,10 @@ class MinecraftChatTask:
                 description=f"{leave_player} s'est déconnecté.",
                 color=discord.Color.orange(),
             )
-            await events_channel.send(embed=embed)
+            await events_channel.send(
+                embed=embed,
+                allowed_mentions=discord.AllowedMentions.none(),
+            )
             return
 
         if self._is_crash_line(line) and events_channel is not None:
@@ -155,11 +175,17 @@ class MinecraftChatTask:
                 description=line,
                 color=discord.Color.dark_red(),
             )
-            await events_channel.send(embed=embed)
+            await events_channel.send(
+                embed=embed,
+                allowed_mentions=discord.AllowedMentions.none(),
+            )
             return
 
         if events_channel is not None:
-            await events_channel.send(f"`{line}`")
+            await events_channel.send(
+                f"`{line}`",
+                allowed_mentions=discord.AllowedMentions.none(),
+            )
 
     async def _get_logs_channel(self) -> discord.TextChannel | None:
         channel_id = ConfigService.get_logs_channel()
@@ -250,6 +276,9 @@ class MinecraftChatTask:
 
     def _is_discord_bridge_line(self, line: str) -> bool:
         return self._DISCORD_BRIDGE in line
+
+    def _is_rcon_line(self, line: str) -> bool:
+        return bool(self._RCON_PATTERN.match(line))
 
     def _clean_log_line(self, line: str) -> str:
         line = self._ANSI_PATTERN.sub("", line)
