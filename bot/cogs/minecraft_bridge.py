@@ -1,4 +1,5 @@
 import asyncio
+import json
 
 import discord
 from discord.ext import commands
@@ -35,12 +36,18 @@ class MinecraftBridge(commands.Cog):
         discord_name = message.author.display_name
         minecraft_name = LinkService.get_minecraft_name(message.author.id)
         suffix = f" ({minecraft_name})" if minecraft_name else ""
-        payload = f"[Discord] {discord_name}{suffix}: {text}"
-        if len(payload) > 250:
-            payload = payload[:247] + "..."
+
+        tellraw_payload = [
+            {"text": "[Discord] ", "color": "dark_aqua"},
+            {"text": discord_name + suffix, "color": "gold"},
+            {"text": ": ", "color": "gray"},
+            {"text": text, "color": "white"},
+        ]
+
+        command = f"tellraw @a {json.dumps(tellraw_payload, ensure_ascii=False)}"
 
         try:
-            await asyncio.to_thread(self.minecraft.say, payload)
+            await asyncio.to_thread(self.minecraft.command, command)
         except Exception as exc:
             logger.warning("Impossible d'envoyer le message Minecraft via RCON : %s", exc)
 
