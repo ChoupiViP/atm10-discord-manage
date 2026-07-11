@@ -8,7 +8,9 @@ import discord
 from bot.logger import logger
 from bot.services.config_service import ConfigService
 from bot.services.docker_service import DockerService
+from bot.services.link_service import LinkService
 from bot.services.minecraft_service import MinecraftService
+from bot.embeds.minecraft_embed import MinecraftEmbed
 
 
 class MinecraftChatTask:
@@ -120,6 +122,12 @@ class MinecraftChatTask:
 
         chat_match = self._CHAT_PATTERN.match(line)
         if chat_match:
+            author = chat_match.group(1)
+            message = chat_match.group(2)
+
+            if await self._handle_link_code(author, message):
+                return
+
             if chat_channel is not None:
                 target = chat_channel
             elif events_channel is not None:
@@ -127,10 +135,137 @@ class MinecraftChatTask:
             else:
                 return
 
+            discord_user_id = LinkService.get_discord_id(author)
+            discord_handle = ""
+            if discord_user_id is not None:
+                discord_user = self.bot.get_user(discord_user_id)
+                discord_handle = f" ({discord_user.display_name})" if discord_user else ""
+
+            await target.send(
+                f"**{author}{discord_handle}** : {message}",
+                allowed_mentions=discord.AllowedMentions.none(),
+            )
+            return
+
+        death_message = self._parse_death_line(line)
+        if death_message:
+            if death_channel is not None:
+                target = death_channel
+            elif events_channel is not None:
+                target = events_channel
+            else:
+                return
+
+            embed = discord.Embed(
+                title="💀 Mort Minecraft",
+                description=death_message,
+                color=discord.Color.red(),
+            )
+            await target.send(
+                embed=embed,
+                allowed_mentions=discord.AllowedMentions.none(),
+            )
+            return
+
+        join_player = self._parse_join_line(line)
+        if join_player and events_channel is not None:
+            embed = discord.Embed(
+                title="✅ Connexion Minecraft",
+                description=f"{join_player} est connecté.",
+                color=discord.Color.green(),
+            )
+            await events_channel.send(
+                embed=embed,
+                allowed_mentions=discord.AllowedMentions.none(),
+            )
+            return
+
+        leave_player = self._parse_leave_line(line)
+        if leave_player and events_channel is not None:
+            embed = discord.Embed(
+                title="❌ Déconnexion Minecraft",
+                description=f"{leave_player} s'est déconnecté.",
+                color=discord.Color.orange(),
+            )
+            await events_channel.send(
+                embed=embed,
+                allowed_mentions=discord.AllowedMentions.none(),
+            )
+            return
+
+        if self._is_crash_line(line) and events_channel is not None:
+            embed = discord.Embed(
+                title="🚨 Crash Minecraft",
+                description=line,
+                color=discord.Color.dark_red(),
+            )
+            await events_channel.send(
+                embed=embed,
+                allowed_mentions=discord.AllowedMentions.none(),
+            )
+            return
+
+        if events_channel is not None:
+            await events_channel.send(
+                f"`{line}`",
+                allowed_mentions=discord.AllowedMentions.none(),
+            )
+
+    async def _handle_link_code(self, author: str, message: str) -> bool:
+        code = LinkService.find_code_in_message(message)
+        if not code:
+            return False
+
+        discord_id = LinkService.consume_link_code(code)
+        if discord_id is None:
+            return False
+
+        LinkService.set_link(discord_id, author)
+
+        try:
+            user = await self.bot.fetch_user(discord_id)
+            await user.send(
+                embed=MinecraftEmbed.success(
+                    "Compte lié",
+                    f"Votre pseudo Minecraft `{author}` est désormais lié à Discord.",
+                )
+            )
+        except Exception:
+            pass
+
+        chat_channel = await self._get_chat_channel()
+        if chat_channel is not None:
+            await chat_channel.send(
+                f"✅ Le pseudo Minecraft **{author}** est maintenant lié à <@{discord_id}>.",
+                allowed_mentions=discord.AllowedMentions(users=True),
+            )
+
+        return True
+
+        chat_match = self._CHAT_PATTERN.match(line)
+        if chat_match:
             author = chat_match.group(1)
             message = chat_match.group(2)
+
+            if await self._handle_link_code(author, message):
+                return
+
+            if chat_channel is not None:
+                target = chat_channel
+            elif events_channel is not None:
+                target = events_channel
+            else:
+                return
+
+            discord_name = LinkService.get_discord_id(author)
+            if discord_name is not None:
+                discord_user = self.bot.get_user(discord_name)
+                discord_handle = f" ({discord_user.display_name})" if discord_user else ""
+            else:
+                discord_handle = ""
+
             await target.send(
-                f"**{author}** : {message}",
+                f"**{author}{discord_handle}** : {message}",
                 allowed_mentions=discord.AllowedMentions.none(),
             )
             return

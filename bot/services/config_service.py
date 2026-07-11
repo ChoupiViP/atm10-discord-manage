@@ -35,7 +35,8 @@ class ConfigService:
         },
         "notifications": {
             "channel_id": None
-        }
+        },
+        "links": {}
     }
 
     _config_cache: dict | None = None

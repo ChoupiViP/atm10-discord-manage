@@ -3,6 +3,8 @@ import asyncio
 import discord
 from discord.ext import commands
 
+from bot.logger import logger
+from bot.services.link_service import LinkService
 from bot.services.config_service import ConfigService
 from bot.services.minecraft_service import MinecraftService
 
@@ -31,7 +33,9 @@ class MinecraftBridge(commands.Cog):
             return
 
         discord_name = message.author.display_name
-        payload = f"[Discord] {discord_name}: {text}"
+        minecraft_name = LinkService.get_minecraft_name(message.author.id)
+        suffix = f" ({minecraft_name})" if minecraft_name else ""
+        payload = f"[Discord] {discord_name}{suffix}: {text}"
         if len(payload) > 250:
             payload = payload[:247] + "..."
 
