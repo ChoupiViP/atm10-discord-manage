@@ -27,6 +27,12 @@ class ConfigService:
         "logs": {
             "channel_id": None
         },
+        "chat": {
+            "channel_id": None
+        },
+        "death": {
+            "channel_id": None
+        },
         "notifications": {
             "channel_id": None
         }
@@ -200,6 +206,42 @@ class ConfigService:
     def get_logs_channel(cls):
 
         return cls.load()["logs"]["channel_id"]
+
+    # --------------------------------------------------
+    # Chat
+    # --------------------------------------------------
+
+    @classmethod
+    def set_chat_channel(cls, channel_id: int):
+
+        config = cls.load()
+
+        config["chat"]["channel_id"] = channel_id
+
+        cls.save(config)
+
+    @classmethod
+    def get_chat_channel(cls):
+
+        return cls.load()["chat"]["channel_id"]
+
+    # --------------------------------------------------
+    # Death
+    # --------------------------------------------------
+
+    @classmethod
+    def set_death_channel(cls, channel_id: int):
+
+        config = cls.load()
+
+        config["death"]["channel_id"] = channel_id
+
+        cls.save(config)
+
+    @classmethod
+    def get_death_channel(cls):
+
+        return cls.load()["death"]["channel_id"]
 
     # --------------------------------------------------
     # Notifications

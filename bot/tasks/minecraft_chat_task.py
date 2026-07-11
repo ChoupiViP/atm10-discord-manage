@@ -20,6 +20,12 @@ class MinecraftChatTask:
         re.IGNORECASE,
     )
     _DISCORD_BRIDGE = "[Discord]"
+    _JOIN_PATTERN = re.compile(r"^\[.*?\] \[.*?\]: (.+?) joined the game$")
+    _LEAVE_PATTERN = re.compile(r"^\[.*?\] \[.*?\]: (.+?) left the game$")
+    _CRASH_PATTERN = re.compile(
+        r"\b(crash|crashed|exception|stacktrace|fatal|error)\b",
+        re.IGNORECASE,
+    )
 
     def __init__(self, bot: discord.Client) -> None:
         self.bot = bot
@@ -28,8 +34,10 @@ class MinecraftChatTask:
         self.queue: asyncio.Queue[str] = asyncio.Queue()
         self.thread: threading.Thread | None = None
         self.task: asyncio.Task | None = None
-        self._logs_channel_id: int | None = None
-        self._logs_channel: discord.TextChannel | None = None
+        self._events_channel_id: int | None = None
+        self._events_channel: discord.TextChannel | None = None
+        self._chat_channel_id: int | None = None
+        self._chat_channel: discord.TextChannel | None = None
 
     def start(self) -> None:
         if self.task is None or self.task.done():
@@ -89,57 +97,161 @@ class MinecraftChatTask:
         if self._is_discord_bridge_line(line):
             return
 
-        channel = await self._get_logs_channel()
-        if channel is None:
-            return
+        chat_channel = await self._get_chat_channel()
+        death_channel = await self._get_death_channel()
+        events_channel = await self._get_logs_channel()
 
         chat_match = self._CHAT_PATTERN.match(line)
-        if chat_match:
+        if chat_match and (chat_channel is not None or events_channel is not None):
+            target = chat_channel or events_channel
             author = chat_match.group(1)
             message = chat_match.group(2)
-            await channel.send(f"**{author}** : {message}")
+            await target.send(f"**{author}** : {message}")
             return
 
         death_message = self._parse_death_line(line)
-        if death_message:
+        if death_message and (death_channel is not None or events_channel is not None or chat_channel is not None):
+            target = death_channel or events_channel or chat_channel
             embed = discord.Embed(
                 title="💀 Mort Minecraft",
                 description=death_message,
                 color=discord.Color.red(),
             )
-            await channel.send(embed=embed)
+            await target.send(embed=embed)
+            return
+
+        join_player = self._parse_join_line(line)
+        if join_player and events_channel is not None:
+            embed = discord.Embed(
+                title="✅ Connexion Minecraft",
+                description=f"{join_player} est connecté.",
+                color=discord.Color.green(),
+            )
+            await events_channel.send(embed=embed)
+            return
+
+        leave_player = self._parse_leave_line(line)
+        if leave_player and events_channel is not None:
+            embed = discord.Embed(
+                title="❌ Déconnexion Minecraft",
+                description=f"{leave_player} s'est déconnecté.",
+                color=discord.Color.orange(),
+            )
+            await events_channel.send(embed=embed)
+            return
+
+        if self._is_crash_line(line) and events_channel is not None:
+            embed = discord.Embed(
+                title="🚨 Crash Minecraft",
+                description=line,
+                color=discord.Color.dark_red(),
+            )
+            await events_channel.send(embed=embed)
+            return
+
+        if events_channel is not None:
+            await events_channel.send(f"`{line}`")
 
     async def _get_logs_channel(self) -> discord.TextChannel | None:
         channel_id = ConfigService.get_logs_channel()
         if channel_id is None:
-            self._logs_channel_id = None
-            self._logs_channel = None
+            self._events_channel_id = None
+            self._events_channel = None
             return None
 
-        if self._logs_channel_id == channel_id and self._logs_channel is not None:
-            return self._logs_channel
+        if self._events_channel_id == channel_id and self._events_channel is not None:
+            return self._events_channel
 
-        self._logs_channel_id = channel_id
+        self._events_channel_id = channel_id
         channel = self.bot.get_channel(channel_id)
         if channel is not None and isinstance(channel, discord.TextChannel):
-            self._logs_channel = channel
+            self._events_channel = channel
             return channel
 
         try:
             fetched = await self.bot.fetch_channel(channel_id)
         except discord.NotFound:
-            self._logs_channel = None
+            self._events_channel = None
             return None
 
         if isinstance(fetched, discord.TextChannel):
-            self._logs_channel = fetched
+            self._events_channel = fetched
             return fetched
 
-        self._logs_channel = None
+        self._events_channel = None
+        return None
+
+    async def _get_chat_channel(self) -> discord.TextChannel | None:
+        channel_id = ConfigService.get_chat_channel()
+        if channel_id is None:
+            self._chat_channel_id = None
+            self._chat_channel = None
+            return None
+
+        if self._chat_channel_id == channel_id and self._chat_channel is not None:
+            return self._chat_channel
+
+        self._chat_channel_id = channel_id
+        channel = self.bot.get_channel(channel_id)
+        if channel is not None and isinstance(channel, discord.TextChannel):
+            self._chat_channel = channel
+            return channel
+
+        try:
+            fetched = await self.bot.fetch_channel(channel_id)
+        except discord.NotFound:
+            self._chat_channel = None
+            return None
+
+        if isinstance(fetched, discord.TextChannel):
+            self._chat_channel = fetched
+            return fetched
+
+        self._chat_channel = None
+        return None
+
+    async def _get_death_channel(self) -> discord.TextChannel | None:
+        channel_id = ConfigService.get_death_channel()
+        if channel_id is None:
+            self._death_channel_id = None
+            self._death_channel = None
+            return None
+
+        if self._death_channel_id == channel_id and self._death_channel is not None:
+            return self._death_channel
+
+        self._death_channel_id = channel_id
+        channel = self.bot.get_channel(channel_id)
+        if channel is not None and isinstance(channel, discord.TextChannel):
+            self._death_channel = channel
+            return channel
+
+        try:
+            fetched = await self.bot.fetch_channel(channel_id)
+        except discord.NotFound:
+            self._death_channel = None
+            return None
+
+        if isinstance(fetched, discord.TextChannel):
+            self._death_channel = fetched
+            return fetched
+
+        self._death_channel = None
         return None
 
     def _is_discord_bridge_line(self, line: str) -> bool:
         return self._DISCORD_BRIDGE in line
+
+    def _parse_join_line(self, line: str) -> str | None:
+        match = self._JOIN_PATTERN.match(line)
+        return match.group(1).strip() if match else None
+
+    def _parse_leave_line(self, line: str) -> str | None:
+        match = self._LEAVE_PATTERN.match(line)
+        return match.group(1).strip() if match else None
+
+    def _is_crash_line(self, line: str) -> bool:
+        return bool(self._CRASH_PATTERN.search(line))
 
     def _parse_death_line(self, line: str) -> str | None:
         match = self._DEATH_PATTERN.match(line)

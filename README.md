@@ -355,7 +355,7 @@ Fonctionnalités disponibles :
 
 ---
 
-## 🚧 v0.7.0
+## ✅ v0.7.0
 
 Dashboard Discord interactif :
 

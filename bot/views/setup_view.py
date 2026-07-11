@@ -160,14 +160,71 @@ class SetupView(discord.ui.View):
     ):
 
         embed = discord.Embed(
-            title="📜 Configuration des Logs",
-            description="Sélectionnez le salon qui recevra les logs Minecraft.",
+            title="📜 Configuration des Logs Minecraft",
+            description=(
+                "Sélectionnez le salon qui recevra les connexions, déconnexions, "
+                "crashs et les logs Minecraft."
+            ),
             color=discord.Color.orange()
         )
 
         await interaction.response.send_message(
             embed=embed,
             view=ChannelSelectView("logs"),
+            ephemeral=True
+        )
+
+    @discord.ui.button(
+        label="Chat",
+        emoji="💬",
+        style=discord.ButtonStyle.secondary,
+        row=1,
+        custom_id="setup_chat"
+    )
+    async def chat(
+        self,
+        interaction: discord.Interaction,
+        button: discord.ui.Button
+    ):
+
+        embed = discord.Embed(
+            title="💬 Configuration du Chat Minecraft",
+            description=(
+                "Sélectionnez le salon qui recevra le chat Minecraft."
+            ),
+            color=discord.Color.orange()
+        )
+
+        await interaction.response.send_message(
+            embed=embed,
+            view=ChannelSelectView("chat"),
+            ephemeral=True
+        )
+
+    @discord.ui.button(
+        label="Morts",
+        emoji="💀",
+        style=discord.ButtonStyle.secondary,
+        row=2,
+        custom_id="setup_deaths"
+    )
+    async def deaths(
+        self,
+        interaction: discord.Interaction,
+        button: discord.ui.Button
+    ):
+
+        embed = discord.Embed(
+            title="💀 Configuration des Morts Minecraft",
+            description=(
+                "Sélectionnez le salon qui recevra les messages de mort Minecraft."
+            ),
+            color=discord.Color.red()
+        )
+
+        await interaction.response.send_message(
+            embed=embed,
+            view=ChannelSelectView("death"),
             ephemeral=True
         )
 
