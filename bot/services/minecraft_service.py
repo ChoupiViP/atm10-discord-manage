@@ -78,9 +78,16 @@ class MinecraftService:
     def player_info(self, player: str) -> dict[str, str]:
         """Récupère les informations principales d'un joueur Minecraft."""
         online_players = self.online_players()
-        logger.debug(f"Joueurs en ligne: {online_players}")
+        logger.info(f"Vérification du joueur '{player}' dans la liste: {online_players}")
         
+        # Vérifier le joueur avec case-insensitive si pas de match exact
         online = player in online_players
+        if not online:
+            # Chercher avec correspondance case-insensitive
+            online = any(p.lower() == player.lower() for p in online_players)
+            if online:
+                logger.info(f"Match trouvé avec case-insensitive pour {player}")
+        
         logger.info(f"Joueur {player} connecté: {online}")
         
         position = self._get_player_data(player, "Pos")
@@ -97,7 +104,7 @@ class MinecraftService:
             "playtime": playtime or "N/A",
             "position": self._clean_rcon_value(position) or "N/A",
             "dimension": self._clean_rcon_value(dimension) or "N/A",
-            "ping": f"{ping} ms" if ping is not None else "N/A",
+            "ping": f"{ping}" if ping and "Found no elements" not in str(ping) else "N/A",
         }
 
     def say(self, message: str):
@@ -221,13 +228,19 @@ class MinecraftService:
         player_list = self._MINECRAFT_COLOR_PATTERN.sub("", player_list)
         
         players = [name.strip() for name in player_list.split(",") if name.strip()]
-        logger.debug(f"Parsed players from '{player_list}': {players}")
+        logger.info(f"Joueurs en ligne détectés: {players}")
         return players
 
     def _get_player_data(self, player: str, path: str) -> str | None:
         try:
             response = self.rcon.command(f"data get entity {player} {path}")
             logger.debug(f"[RCON] data get entity {player} {path} => {response!r}")
+            
+            # Si la commande retourne "Found no elements", c'est une erreur, pas une réponse valide
+            if isinstance(response, str) and "Found no elements" in response:
+                logger.debug(f"Chemin NBT non trouvé pour {path}")
+                return response  # Retourner tel quel pour que le parsing le reconnaisse comme erreur
+            
             result = self._parse_data_get_response(response)
             logger.debug(f"[RCON] parsed result: {result!r}")
             return result
@@ -270,12 +283,37 @@ class MinecraftService:
         value = self._MINECRAFT_COLOR_PATTERN.sub("", value)
         value = value.replace("\x00", "")
         value = value.strip()
+        
+        # Retirer les guillemets des strings Minecraft
+        if value.startswith('"') and value.endswith('"'):
+            value = value[1:-1]
+        
+        # Formater les listes NBT [x, y, z] en coordonnées
+        if value.startswith('[') and value.endswith(']'):
+            # Extraire et formater: [-32.13888434360863d, 81.0d, 311.470264499304d] -> (-32.14, 81, 311.47)
+            try:
+                coords = value[1:-1].split(',')
+                coords = [float(c.strip().rstrip('d')) for c in coords]
+                value = f"({coords[0]:.2f}, {coords[1]:.0f}, {coords[2]:.2f}"
+            except Exception:
+                pass  # Garder la valeur originale si parse échoue
+        
         return value or None
 
     def _format_playtime(self, value: str) -> str:
+        if not value or "Found no elements" in value:
+            logger.debug(f"Temps de jeu indisponible: {value!r}")
+            return "N/A"
+        
         try:
-            ticks = int(re.search(r"-?\d+", value).group(0))
-        except Exception:
+            match = re.search(r"-?\d+", value)
+            if not match:
+                logger.warning(f"Impossible de parser le temps de jeu: {value!r}")
+                return "N/A"
+            
+            ticks = int(match.group(0))
+        except Exception as exc:
+            logger.warning(f"Erreur parsing temps de jeu: {exc}")
             return "N/A"
 
         seconds = ticks // 20
