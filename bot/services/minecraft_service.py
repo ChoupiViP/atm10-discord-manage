@@ -115,9 +115,11 @@ class MinecraftService:
 
     def online_players(self) -> list[str]:
         response = self.rcon.list_players()
-        logger.debug(f"[RCON] list_players response: {response!r}")
+        logger.info(f"[LIST] Raw response: {response!r}")
+        logger.info(f"[LIST] Response length: {len(response) if isinstance(response, str) else 'N/A'}")
+        logger.info(f"[LIST] Response type: {type(response)}")
         players = self._parse_online_players(response)
-        logger.debug(f"[RCON] parsed online players: {players}")
+        logger.info(f"[LIST] Parsed players: {players!r}")
         return players
 
     def save_all(self):
@@ -216,29 +218,38 @@ class MinecraftService:
         return f"{values[0]} TPS" if values else "N/A"
 
     def _parse_online_players(self, response: str) -> list[str]:
+        if not isinstance(response, str):
+            logger.warning(f"[PARSE] Response n'est pas une string: {type(response)}")
+            return []
+        
+        logger.info(f"[PARSE] Tentative de match sur: {response!r}")
+        
         match = self._PLAYER_LIST_PATTERN.search(response)
         if not match:
-            logger.debug(f"Aucun match pour PLAYER_LIST_PATTERN dans: {response!r}")
+            logger.warning(f"[PARSE] Aucun match pour PLAYER_LIST_PATTERN")
+            logger.info(f"[PARSE] Regex pattern: {self._PLAYER_LIST_PATTERN.pattern!r}")
             return []
 
         player_list = match.group(1).strip()
+        logger.info(f"[PARSE] Match group(1) = {player_list!r}")
+        
         if not player_list:
-            logger.debug("Liste de joueurs vide")
+            logger.info("[PARSE] Liste de joueurs vide (match.group(1) vide)")
             return []
 
-        logger.info(f"[LIST] Raw player_list extrait: {player_list!r}")
+        logger.info(f"[PARSE] Raw player_list extrait: {player_list!r}")
 
         # Nettoyer d'abord les codes ANSI/couleurs
         player_list = self._ANSI_PATTERN.sub("", player_list)
         player_list = self._MINECRAFT_COLOR_PATTERN.sub("", player_list)
-        logger.info(f"[LIST] Après nettoyage ANSI/couleurs: {player_list!r}")
+        logger.info(f"[PARSE] Après nettoyage ANSI/couleurs: {player_list!r}")
         
         players = [name.strip() for name in player_list.split(",") if name.strip()]
-        logger.info(f"[LIST] Joueurs en ligne détectés: {players!r}")
+        logger.info(f"[PARSE] Joueurs en ligne détectés: {players!r}")
         
         # Debug: afficher les bytes pour chaque joueur
         for p in players:
-            logger.debug(f"[LIST] Joueur '{p}' ({[ord(c) for c in p[:20]]}...)")
+            logger.info(f"[PARSE] Joueur '{p}' (bytes: {[ord(c) for c in p[:20]]}...)")
         
         return players
 
