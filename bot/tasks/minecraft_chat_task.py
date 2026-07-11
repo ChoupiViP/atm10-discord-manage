@@ -14,9 +14,9 @@ from bot.services.minecraft_service import MinecraftService
 class MinecraftChatTask:
     """Background task that syncs Minecraft chat and death events to Discord."""
 
-    _CHAT_PATTERN = re.compile(r"^\[.*?\]\s*\[.*?\]: <(.+?)> (.+)$")
+    _CHAT_PATTERN = re.compile(r"^\[.*?\]\s*\[.*?\](?:\s*\[.*?\])*\s*:\s*<(.+?)>\s*(.+)$")
     _DEATH_PATTERN = re.compile(
-        r"^\[.*?\]\s*\[.*?\]: (.+? (?:died|was slain by|went up in flames|went up in flames|fell from a high place|fell out of the world|walked into a cactus|walked into fire|walked into danger|was shot by|was killed by|was blown up|was killed trying to hurt|hit the ground too hard|drowned|suffocated|burned to death|walked into a wall|was pricked to death|withered away|went off with a bang|blew up|tried to swim in lava|tried to sleep in a non-empty bed|lost the game).*)$",
+        r"^\[.*?\]\s*\[.*?\](?:\s*\[.*?\])*\s*:\s*(.+? (?:died|was slain by|went up in flames|went up in flames|fell from a high place|fell out of the world|walked into a cactus|walked into fire|walked into danger|was shot by|was killed by|was blown up|was killed trying to hurt|hit the ground too hard|drowned|suffocated|burned to death|walked into a wall|was pricked to death|withered away|went off with a bang|blew up|tried to swim in lava|tried to sleep in a non-empty bed|lost the game).*)$",
         re.IGNORECASE,
     )
     _DISCORD_BRIDGE = "[Discord]"
@@ -295,7 +295,13 @@ class MinecraftChatTask:
     def _clean_log_line(self, line: str) -> str:
         line = self._ANSI_PATTERN.sub("", line)
         line = line.replace("\r", "")
-        return "".join(ch for ch in line if ch == "\t" or ch >= " ")
+        line = "".join(ch for ch in line if ch == "\t" or ch >= " ")
+
+        line = re.sub(r"^>\.+\s*", "", line)
+        if not line:
+            return ""
+
+        return line
 
     def _parse_join_line(self, line: str) -> str | None:
         match = self._JOIN_PATTERN.match(line)
