@@ -21,6 +21,8 @@ class MinecraftService:
         r"(\d+)\s*/\s*(\d+)\s*(?:players|slots)?",
         re.IGNORECASE,
     )
+    _PLAYER_LIST_PATTERN = re.compile(r"There are \d+ of a maximum of \d+ players(?: online:)?\s*(.*)$", re.IGNORECASE)
+    _PLAYER_NAME_PATTERN = re.compile(r"\b{player}\b")
     _TPS_MULTI_PATTERN = re.compile(
         r"(?:from last.*?:|last.*?:)\s*(\d+(?:\.\d+)?),\s*(\d+(?:\.\d+)?),\s*(\d+(?:\.\d+)?)",
         re.IGNORECASE,
@@ -70,6 +72,26 @@ class MinecraftService:
 
     def list_players(self):
         return self.rcon.list_players()
+
+    def player_info(self, player: str) -> dict[str, str]:
+        """Récupère les informations principales d'un joueur Minecraft."""
+        online = self._is_player_online(player)
+        position = self._get_player_data(player, "Pos")
+        dimension = self._get_player_data(player, "Dimension")
+        playtime = self._get_player_data(player, "Stats.minecraft.custom.minecraft.play_time")
+        ping = self._get_player_data(player, "Ping")
+
+        if playtime is not None:
+            playtime = self._format_playtime(playtime)
+
+        return {
+            "player": player,
+            "online": "Oui" if online else "Non",
+            "playtime": playtime or "N/A",
+            "position": position or "N/A",
+            "dimension": dimension or "N/A",
+            "ping": f"{ping} ms" if ping is not None else "N/A",
+        }
 
     def say(self, message: str):
         return self.rcon.say(message)

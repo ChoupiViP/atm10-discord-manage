@@ -44,6 +44,21 @@ class MinecraftEmbed:
         return embed
 
     @staticmethod
+    def player_info(info: dict[str, str]) -> discord.Embed:
+        embed = discord.Embed(
+            title=f"🎮 Infos joueur — {info.get('player', 'Inconnu')}",
+            color=discord.Color.blurple()
+        )
+
+        embed.add_field(name="Connecté", value=info.get("online", "N/A"), inline=False)
+        embed.add_field(name="Temps de jeu", value=info.get("playtime", "N/A"), inline=False)
+        embed.add_field(name="Position", value=info.get("position", "N/A"), inline=False)
+        embed.add_field(name="Dimension", value=info.get("dimension", "N/A"), inline=False)
+        embed.add_field(name="Ping", value=info.get("ping", "N/A"), inline=False)
+
+        return embed
+
+    @staticmethod
     def success(title: str, response: str) -> discord.Embed:
 
         return discord.Embed(

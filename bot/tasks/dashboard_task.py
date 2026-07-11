@@ -31,13 +31,15 @@ class DashboardTask:
     @tasks.loop(seconds=30)
     async def refresh_dashboard(self) -> None:
         """Refresh the registered dashboard message every 30 seconds."""
-        if not self.dashboard.exists():
-            return
-
         try:
+            info = await asyncio.to_thread(self.minecraft.status)
+            await self._update_presence(info)
+
+            if not self.dashboard.exists():
+                return
+
             channel = await self._get_channel(self.dashboard.get_channel_id())
             message = await channel.fetch_message(self.dashboard.get_message_id())
-            info = await asyncio.to_thread(self.minecraft.status)
             await message.edit(
                 embed=DashboardEmbed.create(info),
                 view=DashboardView(self.minecraft),
@@ -65,6 +67,12 @@ class DashboardTask:
     async def before_refresh_dashboard(self) -> None:
         """Wait until Discord is ready before refreshing messages."""
         await self.bot.wait_until_ready()
+
+        try:
+            info = await asyncio.to_thread(self.minecraft.status)
+            await self._update_presence(info)
+        except Exception:
+            logger.exception("Erreur lors de la mise à jour de la présence Discord")
 
     async def _get_channel(self, channel_id: int | None):
         if channel_id is None:

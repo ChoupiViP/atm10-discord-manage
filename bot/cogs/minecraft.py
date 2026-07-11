@@ -81,6 +81,33 @@ class Minecraft(commands.Cog):
         )
 
     @minecraft_group.command(
+        name="player",
+        description="Afficher les informations d'un joueur Minecraft.",
+    )
+    @app_commands.describe(player="Pseudo Minecraft du joueur")
+    async def player(
+        self,
+        interaction: discord.Interaction,
+        player: str,
+    ) -> None:
+        """Show Minecraft player information."""
+        await interaction.response.defer(ephemeral=True)
+
+        try:
+            info = await asyncio.to_thread(self.minecraft.player_info, player)
+        except Exception as exc:
+            await interaction.followup.send(
+                embed=MinecraftEmbed.error(exc),
+                ephemeral=True,
+            )
+            return
+
+        await interaction.followup.send(
+            embed=MinecraftEmbed.player_info(info),
+            ephemeral=True,
+        )
+
+    @minecraft_group.command(
         name="save",
         description="Forcer une sauvegarde du monde Minecraft.",
     )
