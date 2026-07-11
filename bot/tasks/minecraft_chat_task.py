@@ -14,14 +14,14 @@ from bot.services.minecraft_service import MinecraftService
 class MinecraftChatTask:
     """Background task that syncs Minecraft chat and death events to Discord."""
 
-    _CHAT_PATTERN = re.compile(r"^\[.*?\] \[.*?\]: <(.+?)> (.+)$")
+    _CHAT_PATTERN = re.compile(r"^\[.*?\]\s*\[.*?\]: <(.+?)> (.+)$")
     _DEATH_PATTERN = re.compile(
-        r"^\[.*?\] \[.*?\]: (.+? (?:died|was slain by|went up in flames|went up in flames|fell from a high place|fell out of the world|walked into a cactus|walked into fire|walked into danger|was shot by|was killed by|was blown up|was killed trying to hurt|hit the ground too hard|drowned|suffocated|burned to death|walked into a wall|was pricked to death|withered away|went off with a bang|blew up|tried to swim in lava|tried to sleep in a non-empty bed|lost the game).*)$",
+        r"^\[.*?\]\s*\[.*?\]: (.+? (?:died|was slain by|went up in flames|went up in flames|fell from a high place|fell out of the world|walked into a cactus|walked into fire|walked into danger|was shot by|was killed by|was blown up|was killed trying to hurt|hit the ground too hard|drowned|suffocated|burned to death|walked into a wall|was pricked to death|withered away|went off with a bang|blew up|tried to swim in lava|tried to sleep in a non-empty bed|lost the game).*)$",
         re.IGNORECASE,
     )
     _DISCORD_BRIDGE = "[Discord]"
     _RCON_PATTERN = re.compile(
-        r"^(?:\[RCON Listener|\[RCON Client|>).*|Thread RCON Client .*shutting down$",
+        r"^(?:\[(?:RCON Listener|RCON Client).*|>\s*[\.\-\s]*$|Thread RCON Client .*shutting down$)",
         re.IGNORECASE,
     )
     _JOIN_PATTERN = re.compile(r"^\[.*?\] \[.*?\]: (.+?) joined the game$")
@@ -119,8 +119,14 @@ class MinecraftChatTask:
         events_channel = await self._get_logs_channel()
 
         chat_match = self._CHAT_PATTERN.match(line)
-        if chat_match and (chat_channel is not None or events_channel is not None):
-            target = chat_channel or events_channel
+        if chat_match:
+            if chat_channel is not None:
+                target = chat_channel
+            elif events_channel is not None:
+                target = events_channel
+            else:
+                return
+
             author = chat_match.group(1)
             message = chat_match.group(2)
             await target.send(
@@ -130,8 +136,14 @@ class MinecraftChatTask:
             return
 
         death_message = self._parse_death_line(line)
-        if death_message and (death_channel is not None or events_channel is not None or chat_channel is not None):
-            target = death_channel or events_channel or chat_channel
+        if death_message:
+            if death_channel is not None:
+                target = death_channel
+            elif events_channel is not None:
+                target = events_channel
+            else:
+                return
+
             embed = discord.Embed(
                 title="💀 Mort Minecraft",
                 description=death_message,
